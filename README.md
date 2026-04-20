@@ -5,7 +5,7 @@
 - **作者**: lcode.cn
 - **版本**: 2.3
 - **许可证**: Apache 2.0
-- **编译器**: PureBASIC 6.40 (Windows - x86)
+- **编译器**: PureBasic 6.40 (Windows - x86)
 
 ***
 
@@ -13,7 +13,7 @@
 
 PbXls 是一个纯 PureBasic 实现的 Excel 文件操作库，无需安装 Microsoft Office 或任何第三方依赖，即可创建和读取 Excel xlsx/xlsm 文件。
 
-该库基于 Python 的 openpyxl 项目编写，使用 PureBASIC 内置的 XML 和 Packer（ZIP压缩）库实现。
+该库基于 Python 的 openpyxl 项目编写，使用 PureBasic内置的 XML 和 Packer（ZIP压缩）库实现。
 
 ## 主要功能
 
