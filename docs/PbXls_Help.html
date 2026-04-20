@@ -1,0 +1,597 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PbXls Library 操作库参考文档</title>
+  <style>
+    body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; padding: 0; background: #f8f8f8; color: #333; }
+    .header { background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%); color: white; padding: 30px; text-align: center; }
+    .header h1 { margin: 0; font-size: 2.2em; }
+    .header .version { font-size: 1em; opacity: 0.9; margin-top: 10px; }
+    .header .author { font-size: 0.9em; opacity: 0.8; margin-top: 5px; }
+    .nav { background: #2b2b2b; padding: 15px; overflow: auto; }
+    .nav a { color: #fff; text-decoration: none; padding: 5px 15px; display: inline-block; font-size: 0.9em; }
+    .nav a:hover { background: #444; border-radius: 4px; }
+    .container { max-width: 960px; margin: 20px auto; padding: 0 20px; }
+    .section { background: white; margin: 20px 0; padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .section h2 { color: #0078d4; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-top: 0; }
+    .section h3 { color: #333; margin-top: 25px; }
+    .function-block { background: #f5f5f5; padding: 15px; margin: 15px 0; border-left: 4px solid #0078d4; border-radius: 0 4px 4px 0; }
+    .function-name { color: #c7254e; font-family: "Consolas", "Courier New", monospace; font-size: 1.1em; font-weight: bold; }
+    .function-desc { margin: 10px 0; line-height: 1.6; }
+    .function-params { margin: 10px 0; }
+    .function-params table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .function-params th { background: #e8e8e8; padding: 8px; text-align: left; border: 1px solid #ddd; }
+    .function-params td { padding: 8px; border: 1px solid #ddd; }
+    .return-type { background: #e8f5e9; padding: 8px; border-radius: 4px; margin: 10px 0; }
+    .example { background: #263238; color: #e0e0e0; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: "Consolas", "Courier New", monospace; font-size: 0.9em; margin: 10px 0; white-space: pre; line-height: 1.6; }
+    .example .comment { color: #80cbc4; }
+    .example .keyword { color: #c792ea; }
+    .example .function { color: #82b1ff; }
+    .example .string { color: #c3e88d; }
+    .example .number { color: #f78c6c; }
+    .example .variable { color: #ffcb6b; }
+    .toc { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .toc h3 { margin-top: 0; }
+    .toc ul { list-style: none; padding-left: 0; }
+    .toc li { padding: 5px 0; border-bottom: 1px solid #f0f0f0; }
+    .toc a { color: #0078d4; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .note { background: #fff3cd; padding: 12px; border-left: 4px solid #ffc107; border-radius: 4px; margin: 15px 0; }
+    .note strong { color: #856404; }
+    .footer { text-align: center; padding: 20px; color: #666; font-size: 0.9em; margin-top: 40px; }
+    code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: "Consolas", "Courier New", monospace; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PbXls Library</h1>
+  <div class="version">版本 2.3</div>
+  <div class="author">作者: lcode.cn | 许可证: Apache 2.0</div>
+</div>
+
+<div class="nav">
+  <a href="#overview">概述</a>
+  <a href="#workbook">工作簿</a>
+  <a href="#worksheet">工作表</a>
+  <a href="#cell">单元格</a>
+  <a href="#style">样式</a>
+  <a href="#utility">工具函数</a>
+  <a href="#examples">示例代码</a>
+</div>
+
+<div class="container">
+
+  <div class="section" id="overview">
+    <h2>概述</h2>
+    <p>PbXls 是一个纯 PureBasic 实现的 Excel 文件操作库，无需安装 Microsoft Office 或任何第三方依赖，即可创建和读取 Excel xlsx/xlsm 文件。</p>
+    <p>该库参考 Python 的 openpyxl 项目移植而来，使用 PureBasic 内置的 XML 和 Packer 库实现。</p>
+    <div class="note">
+      <strong>注意：</strong>使用 PbXls 库前，需要在代码开头添加 <code>XIncludeFile "PbXls.pb"</code> 以引入库文件。库会自动初始化，无需手动调用初始化函数。
+    </div>
+    <h3>主要功能</h3>
+    <ul>
+      <li>创建和读取 Excel xlsx/xlsm 文件</li>
+      <li>读写单元格数据（字符串、数值、公式、布尔、日期等）</li>
+      <li>多工作表支持</li>
+      <li>单元格样式（字体、填充、边框、对齐、数字格式）</li>
+      <li>合并单元格</li>
+      <li>行列宽高设置</li>
+      <li>共享字符串表优化</li>
+      <li>完整的 ZIP 压缩支持</li>
+    </ul>
+  </div>
+
+  <div class="toc">
+    <h3>函数索引</h3>
+    <ul>
+      <li><a href="#CreateWorkbook">CreateWorkbook</a> - 创建新工作簿</li>
+      <li><a href="#LoadWorkbook">LoadWorkbook</a> - 加载工作簿</li>
+      <li><a href="#SaveWorkbook">SaveWorkbook</a> - 保存工作簿</li>
+      <li><a href="#GetSheetCount">GetSheetCount</a> - 获取工作表数量</li>
+      <li><a href="#AddWorksheet">AddWorksheet</a> - 添加工作表</li>
+      <li><a href="#DeleteWorksheet">DeleteWorksheet</a> - 删除工作表</li>
+      <li><a href="#GetSheetByIndex">GetSheetByIndex</a> - 按索引获取工作表</li>
+      <li><a href="#GetSheetTitle">GetSheetTitle</a> - 获取工作表名称</li>
+      <li><a href="#SetCell">SetCell</a> - 设置单元格值</li>
+      <li><a href="#SetCellFormula">SetCellFormula</a> - 设置单元格公式</li>
+      <li><a href="#SetColumnWidth">SetColumnWidth</a> - 设置列宽</li>
+      <li><a href="#SetRowHeight">SetRowHeight</a> - 设置行高</li>
+      <li><a href="#MergeCells">MergeCells</a> - 合并单元格</li>
+      <li><a href="#AppendRow">AppendRow</a> - 追加行数据</li>
+      <li><a href="#GetColumnLetter">GetColumnLetter</a> - 列号转字母</li>
+      <li><a href="#ColumnIndexFromString">ColumnIndexFromString</a> - 字母转列号</li>
+      <li><a href="#EscapeXML">EscapeXML</a> - XML转义</li>
+      <li><a href="#Free">Free</a> - 释放资源</li>
+    </ul>
+  </div>
+
+  <!-- ==================== 工作簿操作 ==================== -->
+  <div class="section" id="workbook">
+    <h2>工作簿操作</h2>
+
+    <div class="function-block" id="CreateWorkbook">
+      <div class="function-name">PbXls_CreateWorkbook()</div>
+      <div class="function-desc">创建一个新的 Excel 工作簿。</div>
+      <div class="return-type"><strong>返回值：</strong> 工作簿ID（整数）。失败时返回 -1。</div>
+      <div class="example">
+<span class="comment">; 创建一个新工作簿</span>
+<span class="variable">wbId</span> = <span class="function">PbXls_CreateWorkbook</span>()
+<span class="keyword">If</span> <span class="variable">wbId</span> &gt;= 0
+  <span class="comment">; 工作簿创建成功</span>
+<span class="keyword">EndIf</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="LoadWorkbook">
+      <div class="function-name">PbXls_LoadWorkbook(filename.s)</div>
+      <div class="function-desc">加载一个现有的 Excel 工作簿文件。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>filename</td><td>String</td><td>Excel文件的完整路径</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 工作簿ID（整数）。失败时返回 -1。</div>
+      <div class="note">
+        <strong>注意：</strong> 读取功能当前为占位实现，完整读取功能将在后续版本中实现。
+      </div>
+    </div>
+
+    <div class="function-block" id="SaveWorkbook">
+      <div class="function-name">PbXls_SaveWorkbook(wbId.i, filename.s)</div>
+      <div class="function-desc">将工作簿保存为 Excel 文件。该函数会生成符合 Office Open XML 标准的 xlsx/xlsm 文件。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wbId</td><td>Integer</td><td>工作簿ID（由 CreateWorkbook 或 LoadWorkbook 返回）</td></tr>
+          <tr><td>filename</td><td>String</td><td>输出文件的完整路径（.xlsx 或 .xlsm 后缀）</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+      <div class="example">
+<span class="comment">; 保存工作簿到文件</span>
+<span class="keyword">If</span> <span class="function">PbXls_SaveWorkbook</span>(<span class="variable">wbId</span>, <span class="string">"output.xlsx"</span>)
+  <span class="function">Debug</span> <span class="string">"保存成功！"</span>
+<span class="keyword">Else</span>
+  <span class="function">Debug</span> <span class="string">"保存失败！"</span>
+<span class="keyword">EndIf</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="GetSheetCount">
+      <div class="function-name">PbXls_GetSheetCount(wbId.i)</div>
+      <div class="function-desc">获取工作簿中的工作表数量。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wbId</td><td>Integer</td><td>工作簿ID</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 工作表数量（整数）。</div>
+    </div>
+  </div>
+
+  <!-- ==================== 工作表操作 ==================== -->
+  <div class="section" id="worksheet">
+    <h2>工作表操作</h2>
+
+    <div class="function-block" id="AddWorksheet">
+      <div class="function-name">PbXls_AddWorksheet(wbId.i, title.s = "")</div>
+      <div class="function-desc">在工作簿中添加一个新的工作表。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wbId</td><td>Integer</td><td>工作簿ID</td></tr>
+          <tr><td>title</td><td>String</td><td>工作表名称。如果为空，将自动生成 "SheetN" 格式的名称</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 工作表ID（整数）。失败时返回 -1。</div>
+      <div class="example">
+<span class="comment">; 添加一个默认名称的工作表</span>
+<span class="variable">wsId1</span> = <span class="function">PbXls_AddWorksheet</span>(<span class="variable">wbId</span>)
+<span class="comment">; 结果: Sheet2</span>
+
+<span class="comment">; 添加一个指定名称的工作表</span>
+<span class="variable">wsId2</span> = <span class="function">PbXls_AddWorksheet</span>(<span class="variable">wbId</span>, <span class="string">"数据统计"</span>)
+<span class="comment">; 结果: 数据统计</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="DeleteWorksheet">
+      <div class="function-name">PbXls_DeleteWorksheet(wbId.i, index.i)</div>
+      <div class="function-desc">删除工作簿中指定索引的工作表。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wbId</td><td>Integer</td><td>工作簿ID</td></tr>
+          <tr><td>index</td><td>Integer</td><td>要删除的工作表索引（从0开始）</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+      <div class="note">
+        <strong>注意：</strong> 工作簿至少需要保留一个工作表，如果只剩一个工作表则无法删除。
+      </div>
+    </div>
+
+    <div class="function-block" id="GetSheetByIndex">
+      <div class="function-name">PbXls_GetSheetByIndex(wbId.i, index.i)</div>
+      <div class="function-desc">根据索引获取工作表。返回工作表指针，用于后续操作。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wbId</td><td>Integer</td><td>工作簿ID</td></tr>
+          <tr><td>index</td><td>Integer</td><td>工作表索引（从0开始）</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 工作表指针。如果索引无效则返回 0。</div>
+      <div class="example">
+<span class="comment">; 获取第一个工作表</span>
+<span class="variable">wsId</span> = <span class="function">PbXls_GetSheetByIndex</span>(<span class="variable">wbId</span>, 0)
+<span class="keyword">If</span> <span class="variable">wsId</span> &gt; 0
+  <span class="comment">; 可以操作工作表了</span>
+<span class="keyword">EndIf</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="GetSheetTitle">
+      <div class="function-name">PbXls_GetSheetTitle(wsId.i)</div>
+      <div class="function-desc">获取工作表的名称。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>工作表ID</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 工作表名称（字符串）。</div>
+    </div>
+
+    <div class="function-block" id="SetColumnWidth">
+      <div class="function-name">PbXls_SetColumnWidth(wsId.i, col.i, width.f)</div>
+      <div class="function-desc">设置指定列的宽度。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>工作表ID</td></tr>
+          <tr><td>col</td><td>Integer</td><td>列号（从1开始）</td></tr>
+          <tr><td>width</td><td>Float</td><td>列宽度值</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+      <div class="example">
+<span class="comment">; 设置第1列宽度为20</span>
+<span class="function">PbXls_SetColumnWidth</span>(<span class="variable">wsId</span>, 1, 20.0)
+<span class="comment">; 设置第3列宽度为15.5</span>
+<span class="function">PbXls_SetColumnWidth</span>(<span class="variable">wsId</span>, 3, 15.5)
+      </div>
+    </div>
+
+    <div class="function-block" id="SetRowHeight">
+      <div class="function-name">PbXls_SetRowHeight(wsId.i, row.i, height.f)</div>
+      <div class="function-desc">设置指定行的高度。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>工作表ID</td></tr>
+          <tr><td>row</td><td>Integer</td><td>行号（从1开始）</td></tr>
+          <tr><td>height</td><td>Float</td><td>行高度值</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+    </div>
+
+    <div class="function-block" id="MergeCells">
+      <div class="function-name">PbXls_MergeCells(wsId.i, rangeString.s)</div>
+      <div class="function-desc">合并指定范围的单元格。范围格式为 "A1:B2" 或 "A1:D4"。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>工作表ID</td></tr>
+          <tr><td>rangeString</td><td>String</td><td>合并范围，如 "A1:B2"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+      <div class="example">
+<span class="comment">; 合并A1到B2范围</span>
+<span class="function">PbXls_MergeCells</span>(<span class="variable">wsId</span>, <span class="string">"A1:B2"</span>)
+<span class="comment">; 合并A1到D4范围</span>
+<span class="function">PbXls_MergeCells</span>(<span class="variable">wsId</span>, <span class="string">"A1:D4"</span>)
+      </div>
+    </div>
+
+    <div class="function-block" id="UnmergeCells">
+      <div class="function-name">PbXls_UnmergeCells(wsId.i, rangeString.s)</div>
+      <div class="function-desc">取消合并指定范围的单元格。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>工作表ID</td></tr>
+          <tr><td>rangeString</td><td>String</td><td>要取消合并的范围，如 "A1:B2"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+    </div>
+
+    <div class="function-block" id="AppendRow">
+      <div class="function-name">PbXls_AppendRow(wsId.i, List values.s())</div>
+      <div class="function-desc">在工作表末尾追加一行数据。数据会从当前行的下一行开始，依次写入各列。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>工作表ID</td></tr>
+          <tr><td>values</td><td>List String</td><td>要写入的字符串列表，每个元素对应一列</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+      <div class="example">
+<span class="keyword">NewList</span> <span class="variable">data</span>.<span class="keyword">s</span>()
+
+<span class="function">AddElement</span>(<span class="variable">data</span>())
+<span class="variable">data</span>() = <span class="string">"姓名"</span>
+<span class="function">AddElement</span>(<span class="variable">data</span>())
+<span class="variable">data</span>() = <span class="string">"年龄"</span>
+<span class="function">AddElement</span>(<span class="variable">data</span>())
+<span class="variable">data</span>() = <span class="string">"城市"</span>
+
+<span class="function">PbXls_AppendRow</span>(<span class="variable">wsId</span>, <span class="variable">data</span>())
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 单元格操作 ==================== -->
+  <div class="section" id="cell">
+    <h2>单元格操作</h2>
+
+    <div class="function-block" id="SetCell">
+      <div class="function-name">PbXls_SetCell(wsId.i, row.i, col.i, value.s)</div>
+      <div class="function-desc">设置指定单元格的值。单元格数据类型会根据值自动推断（字符串、数值、布尔等）。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>工作表ID</td></tr>
+          <tr><td>row</td><td>Integer</td><td>行号（从1开始）</td></tr>
+          <tr><td>col</td><td>Integer</td><td>列号（从1开始）</td></tr>
+          <tr><td>value</td><td>String</td><td>单元格值</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+      <div class="example">
+<span class="comment">; 写入字符串</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 1, <span class="string">"Hello PbXls!"</span>)
+<span class="comment">; 写入数值</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 2, <span class="string">"123.45"</span>)
+<span class="comment">; 写入布尔值</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 3, <span class="string">"true"</span>)
+<span class="comment">; 写入日期</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 4, <span class="string">"2026-04-20"</span>)
+      </div>
+    </div>
+
+    <div class="function-block" id="SetCellFormula">
+      <div class="function-name">PbXls_SetCellFormula(wsId.i, row.i, col.i, formula.s)</div>
+      <div class="function-desc">设置指定单元格的公式。公式必须以 "=" 开头。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>工作表ID</td></tr>
+          <tr><td>row</td><td>Integer</td><td>行号（从1开始）</td></tr>
+          <tr><td>col</td><td>Integer</td><td>列号（从1开始）</td></tr>
+          <tr><td>formula</td><td>String</td><td>单元格公式，如 "=SUM(A1:A10)"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+      <div class="example">
+<span class="comment">; 设置求和公式</span>
+<span class="function">PbXls_SetCellFormula</span>(<span class="variable">wsId</span>, 11, 1, <span class="string">"=SUM(A1:A10)"</span>)
+<span class="comment">; 设置平均值公式</span>
+<span class="function">PbXls_SetCellFormula</span>(<span class="variable">wsId</span>, 11, 2, <span class="string">"=AVERAGE(B1:B10)"</span>)
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 样式操作 ==================== -->
+  <div class="section" id="style">
+    <h2>样式操作</h2>
+
+    <div class="function-block">
+      <div class="function-name">PbXls_CreateFont(name.s = "Calibri", size.f = 11.0, color.s = "000000", bold.b = #False, italic.b = #False, underline.b = #False)</div>
+      <div class="function-desc">创建字体样式。</div>
+      <div class="return-type"><strong>返回值：</strong> 字体样式ID（整数）。</div>
+    </div>
+
+    <div class="function-block">
+      <div class="function-name">PbXls_CreateFill(patternFill.s = "none", fgColor.s = "", bgColor.s = "")</div>
+      <div class="function-desc">创建填充样式。</div>
+      <div class="return-type"><strong>返回值：</strong> 填充样式ID（整数）。</div>
+    </div>
+
+    <div class="function-block">
+      <div class="function-name">PbXls_CreateBorderStyle(top.s = "none", right.s = "none", bottom.s = "none", left.s = "none", color.s = "000000")</div>
+      <div class="function-desc">创建边框样式。</div>
+      <div class="return-type"><strong>返回值：</strong> 边框样式ID（整数）。</div>
+    </div>
+
+    <div class="function-block">
+      <div class="function-name">PbXls_CreateAlignment(horizontal.s = "", vertical.s = "", wrapText.b = #False)</div>
+      <div class="function-desc">创建对齐样式。</div>
+      <div class="return-type"><strong>返回值：</strong> 对齐样式ID（整数）。</div>
+    </div>
+  </div>
+
+  <!-- ==================== 工具函数 ==================== -->
+  <div class="section" id="utility">
+    <h2>工具函数</h2>
+
+    <div class="function-block" id="GetColumnLetter">
+      <div class="function-name">PbXls_GetColumnLetter(colNum.i)</div>
+      <div class="function-desc">将列号转换为列字母。例如 1 转换为 "A"，27 转换为 "AA"。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>colNum</td><td>Integer</td><td>列号（从1开始）</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 列字母（字符串）。</div>
+      <div class="example">
+<span class="variable">letter</span> = <span class="function">PbXls_GetColumnLetter</span>(1)   <span class="comment">; 返回 "A"</span>
+<span class="variable">letter</span> = <span class="function">PbXls_GetColumnLetter</span>(27)  <span class="comment">; 返回 "AA"</span>
+<span class="variable">letter</span> = <span class="function">PbXls_GetColumnLetter</span>(702) <span class="comment">; 返回 "ZZ"</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="ColumnIndexFromString">
+      <div class="function-name">PbXls_ColumnIndexFromString(colLetter.s)</div>
+      <div class="function-desc">将列字母转换为列号。例如 "A" 转换为 1，"AA" 转换为 27。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>colLetter</td><td>String</td><td>列字母（如 "A", "AA", "ZZ"）</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 列号（整数）。</div>
+      <div class="example">
+<span class="variable">num</span> = <span class="function">PbXls_ColumnIndexFromString</span>(<span class="string">"A"</span>)   <span class="comment">; 返回 1</span>
+<span class="variable">num</span> = <span class="function">PbXls_ColumnIndexFromString</span>(<span class="string">"AA"</span>)  <span class="comment">; 返回 27</span>
+<span class="variable">num</span> = <span class="function">PbXls_ColumnIndexFromString</span>(<span class="string">"ZZ"</span>) <span class="comment">; 返回 702</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="EscapeXML">
+      <div class="function-name">PbXls_EscapeXML(str.s)</div>
+      <div class="function-desc">转义字符串中的 XML 特殊字符。将 &amp;、&lt;、&gt;、" 和 ' 转义为 XML 实体。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>str</td><td>String</td><td>需要转义的字符串</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 转义后的字符串。</div>
+      <div class="example">
+<span class="variable">escaped</span> = <span class="function">PbXls_EscapeXML</span>(<span class="string">"A < B & C > D"</span>)
+<span class="comment">; 返回 "A &lt; B &amp; C &gt; D"</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="Free">
+      <div class="function-name">PbXls_Free()</div>
+      <div class="function-desc">释放 PbXls 库占用的所有资源。在程序结束前应调用此函数。</div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True。</div>
+      <div class="example">
+<span class="comment">; 程序结束前清理资源</span>
+<span class="function">PbXls_Free</span>()
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 示例代码 ==================== -->
+  <div class="section" id="examples">
+    <h2>示例代码</h2>
+
+    <h3>示例1：创建基本Excel文件</h3>
+    <div class="example">
+<span class="comment">; PbXls - 创建基本Excel文件示例</span>
+<span class="keyword">XIncludeFile</span> <span class="string">"PbXls.pb"</span>
+
+<span class="comment">; 创建工作簿</span>
+<span class="variable">wbId</span> = <span class="function">PbXls_CreateWorkbook</span>()
+
+<span class="comment">; 获取第一个工作表</span>
+<span class="variable">wsId</span> = <span class="function">PbXls_GetSheetByIndex</span>(<span class="variable">wbId</span>, 0)
+
+<span class="comment">; 写入表头</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 1, <span class="string">"姓名"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 2, <span class="string">"年龄"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 3, <span class="string">"城市"</span>)
+
+<span class="comment">; 写入数据行</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 2, 1, <span class="string">"张三"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 2, 2, <span class="string">"25"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 2, 3, <span class="string">"北京"</span>)
+
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 3, 1, <span class="string">"李四"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 3, 2, <span class="string">"30"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 3, 3, <span class="string">"上海"</span>)
+
+<span class="comment">; 保存文件</span>
+<span class="function">PbXls_SaveWorkbook</span>(<span class="variable">wbId</span>, <span class="string">"example1.xlsx"</span>)
+
+<span class="comment">; 清理资源</span>
+<span class="function">PbXls_Free</span>()
+    </div>
+
+    <h3>示例2：创建带公式的Excel文件</h3>
+    <div class="example">
+<span class="comment">; PbXls - 创建带公式的Excel文件示例</span>
+<span class="keyword">XIncludeFile</span> <span class="string">"PbXls.pb"</span>
+
+<span class="comment">; 创建工作簿</span>
+<span class="variable">wbId</span> = <span class="function">PbXls_CreateWorkbook</span>()
+<span class="variable">wsId</span> = <span class="function">PbXls_GetSheetByIndex</span>(<span class="variable">wbId</span>, 0)
+
+<span class="comment">; 写入表头</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 1, <span class="string">"项目"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 2, <span class="string">"金额"</span>)
+
+<span class="comment">; 写入数据</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 2, 1, <span class="string">"工资"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 2, 2, <span class="string">"10000"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 3, 1, <span class="string">"奖金"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 3, 2, <span class="string">"5000"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 4, 1, <span class="string">"其他"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 4, 2, <span class="string">"2000"</span>)
+
+<span class="comment">; 添加求和公式</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 5, 1, <span class="string">"总计"</span>)
+<span class="function">PbXls_SetCellFormula</span>(<span class="variable">wsId</span>, 5, 2, <span class="string">"=SUM(B2:B4)"</span>)
+
+<span class="comment">; 保存文件</span>
+<span class="function">PbXls_SaveWorkbook</span>(<span class="variable">wbId</span>, <span class="string">"example2_formula.xlsx"</span>)
+
+<span class="comment">; 清理资源</span>
+<span class="function">PbXls_Free</span>()
+    </div>
+
+    <h3>示例3：创建带样式的Excel文件</h3>
+    <div class="example">
+<span class="comment">; PbXls - 创建带样式的Excel文件示例</span>
+<span class="keyword">XIncludeFile</span> <span class="string">"PbXls.pb"</span>
+
+<span class="comment">; 创建工作簿</span>
+<span class="variable">wbId</span> = <span class="function">PbXls_CreateWorkbook</span>()
+<span class="variable">wsId</span> = <span class="function">PbXls_GetSheetByIndex</span>(<span class="variable">wbId</span>, 0)
+
+<span class="comment">; 写入数据并设置列宽</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 1, <span class="string">"报表标题"</span>)
+<span class="function">PbXls_SetColumnWidth</span>(<span class="variable">wsId</span>, 1, 30.0)
+
+<span class="comment">; 合并单元格</span>
+<span class="function">PbXls_MergeCells</span>(<span class="variable">wsId</span>, <span class="string">"A1:C1"</span>)
+
+<span class="comment">; 写入多行数据</span>
+<span class="keyword">NewList</span> <span class="variable">row1</span>.<span class="keyword">s</span>()
+<span class="function">AddElement</span>(<span class="variable">row1</span>())
+<span class="variable">row1</span>() = <span class="string">"数据1"</span>
+<span class="function">AddElement</span>(<span class="variable">row1</span>())
+<span class="variable">row1</span>() = <span class="string">"数据2"</span>
+<span class="function">AddElement</span>(<span class="variable">row1</span>())
+<span class="variable">row1</span>() = <span class="string">"数据3"</span>
+<span class="function">PbXls_AppendRow</span>(<span class="variable">wsId</span>, <span class="variable">row1</span>())
+
+<span class="comment">; 保存文件</span>
+<span class="function">PbXls_SaveWorkbook</span>(<span class="variable">wbId</span>, <span class="string">"example3_style.xlsx"</span>)
+
+<span class="comment">; 清理资源</span>
+<span class="function">PbXls_Free</span>()
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>PbXls Library v2.3 | 作者: lcode.cn | 许可证: Apache 2.0</p>
+  </div>
+
+</div>
+
+</body>
+</html>
