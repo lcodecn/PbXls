@@ -31,7 +31,7 @@ PbXls 是一个纯 PureBasic 实现的 Excel 文件操作库，无需安装 Micr
 - 本项目在PureBasic 6.40 （Windows x86）中编译通过，其他环境请自行测试。
 
 ## 快速开始
-
+具体可参考开发文档：docs\PbXls_Help.html
 ### 创建Excel工作簿
 
 ```purebasic
