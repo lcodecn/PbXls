@@ -1,11 +1,13 @@
-# PbXls Library v2.3
+# PbXls Library v2.6
 
-**PbXls** - PureBasic Excel xlsx/xlsm 操作库
+PbXls
 
-- **作者**: lcode.cn
-- **版本**: 2.3
-- **许可证**: Apache 2.0
-- **编译器**: PureBasic 6.40 (Windows - x86)
+&#x20;\- PureBasic Excel xlsx/xlsm 操作库
+
+- 作者  : lcode.cn
+- 版本  : 2.6
+- 许可证  : Apache 2.0
+- 编译器  : PureBasic 6.40 (Windows - x86)
 
 ***
 
@@ -17,21 +19,26 @@ PbXls 是一个纯 PureBasic 实现的 Excel 文件操作库，无需安装 Micr
 
 ## 主要功能
 
-- **创建Excel文件**: 从零创建符合 Office Open XML 标准的 xlsx/xlsm 文件
-- **读取Excel文件**: 解析现有 Excel 文件内容（部分实现）
-- **单元格操作**: 读写字符串、数值、公式、布尔值、日期等类型数据
-- **多工作表**: 支持在同一工作簿中创建和管理多个工作表
-- **单元格样式**: 支持字体、填充、边框、对齐、数字格式等样式设置
-- **合并单元格**: 支持单元格合并和取消合并
-- **行列设置**: 支持设置列宽和行高
-- **共享字符串表**: 自动优化字符串存储，使用共享字符串表减少文件大小
+- 创建Excel文件  : 从零创建符合 Office Open XML 标准的 xlsx/xlsm 文件
+- 读取Excel文件  : 解析现有 Excel 文件内容（部分实现）
+- 单元格操作  : 读写字符串、数值、公式、布尔值、日期等类型数据
+- 多工作表  : 支持在同一工作簿中创建和管理多个工作表
+- 单元格样式  : 支持字体、填充、边框、对齐、数字格式等样式设置
+- 合并单元格  : 支持单元格合并和取消合并
+- 行列设置  : 支持设置列宽和行高
+- 列插入/删除  : 支持在指定位置插入和删除列，自动更新单元格、列宽和合并单元格范围
+- 数据验证  : 支持下拉列表、整数验证、小数验证等数据验证规则
+- 条件格式  : 支持单元格值比较、公式条件、颜色刻度等条件格式规则
+- 共享字符串表  : 自动优化字符串存储，使用共享字符串表减少文件大小
 
 ## 系统要求
 
 - 本项目在PureBasic 6.40 （Windows x86）中编译通过，其他环境请自行测试。
 
 ## 快速开始
-具体可参考开发文档：docs\PbXls_Help.html
+
+具体可参考开发文档：docs\PbXls\_Help.html
+
 ### 创建Excel工作簿
 
 ```purebasic
@@ -91,16 +98,18 @@ PbXls_Free()
 
 ### 工作表操作
 
-| 函数                                             | 说明                  |
-| ---------------------------------------------- | ------------------- |
-| `PbXls_AddWorksheet(wbId.i, title.s)`          | 在工作簿中添加新工作表，返回工作表ID |
-| `PbXls_DeleteWorksheet(wbId.i, index.i)`       | 删除指定索引的工作表          |
-| `PbXls_GetSheetTitle(wsId.i)`                  | 获取工作表名称             |
-| `PbXls_SetColumnWidth(wsId.i, col.i, width.f)` | 设置指定列的宽度            |
-| `PbXls_SetRowHeight(wsId.i, row.i, height.f)`  | 设置指定行的高度            |
-| `PbXls_MergeCells(wsId.i, rangeString.s)`      | 合并指定范围的单元格          |
-| `PbXls_UnmergeCells(wsId.i, rangeString.s)`    | 取消合并指定范围的单元格        |
-| `PbXls_AppendRow(wsId.i, List values.s())`     | 在工作表末尾追加一行数据        |
+| 函数                                               | 说明                  |
+| ------------------------------------------------ | ------------------- |
+| `PbXls_AddWorksheet(wbId.i, title.s)`            | 在工作簿中添加新工作表，返回工作表ID |
+| `PbXls_DeleteWorksheet(wbId.i, index.i)`         | 删除指定索引的工作表          |
+| `PbXls_GetSheetTitle(wsId.i)`                    | 获取工作表名称             |
+| `PbXls_SetColumnWidth(wsId.i, col.i, width.f)`   | 设置指定列的宽度            |
+| `PbXls_SetRowHeight(wsId.i, row.i, height.f)`    | 设置指定行的高度            |
+| `PbXls_MergeCells(wsId.i, rangeString.s)`        | 合并指定范围的单元格          |
+| `PbXls_UnmergeCells(wsId.i, rangeString.s)`      | 取消合并指定范围的单元格        |
+| `PbXls_AppendRow(wsId.i, List values.s())`       | 在工作表末尾追加一行数据        |
+| `PbXls_InsertColumns(wsId.i, colIdx.i, count.i)` | 在指定位置插入列            |
+| `PbXls_DeleteColumns(wsId.i, colIdx.i, count.i)` | 删除指定列               |
 
 ### 单元格操作
 
@@ -119,32 +128,80 @@ PbXls_Free()
 | `PbXls_EscapeXML(str.s)`                   | 转义XML特殊字符             |
 | `PbXls_GetCurrentDateTime()`               | 获取当前日期时间字符串           |
 
+### 数据验证
+
+| 函数                                                                      | 说明       |
+| ----------------------------------------------------------------------- | -------- |
+| `PbXls_CreateDataValidation(type, sqref, formula1, formula2, operator)` | 创建数据验证规则 |
+| `PbXls_SetValidationPrompt(id, title, message)`                         | 设置输入提示   |
+| `PbXls_SetValidationError(id, title, message)`                          | 设置错误提示   |
+
+### 条件格式
+
+| 函数                                                                                                  | 说明       |
+| --------------------------------------------------------------------------------------------------- | -------- |
+| `PbXls_CreateConditionalFormat(type, sqref, formula1, formula2, operator)`                          | 创建条件格式规则 |
+| `PbXls_SetConditionalFormatDxf(id, fontColor, fillColor, fontBold, fontItalic)`                     | 设置差异样式   |
+| `PbXls_SetConditionalFormatColorScale(id, minColor, midColor, maxColor, minType, midType, maxType)` | 设置颜色刻度参数 |
+
+### 图表
+
+| 函数                                                        | 说明       |
+| --------------------------------------------------------- | -------- |
+| `PbXls_CreateChart(type, title, anchorRef)`               | 创建图表     |
+| `PbXls_AddChartSeries(chartId, name, values, categories)` | 添加图表数据系列 |
+
 ## 文件结构
 
 PbXls.pb 文件按照功能模块分为以下分区：
 
-| 分区     | 内容                                 |
-| ------ | ---------------------------------- |
-| 分区1    | 常量定义（Excel规范、文件路径、XML命名空间、MIME类型等） |
-| 分区2    | 枚举定义（数据类型、工作表状态、边框、对齐、填充等）         |
-| 分区3    | 结构体定义和全局数据存储                       |
-| 分区4    | 工具函数（坐标转换、字符串处理、日期时间、XML/ZIP辅助）    |
-| 分区5    | XML常量模块                            |
-| 分区6    | 样式模块（字体、填充、边框、对齐、数字格式）             |
-| 分区7    | 单元格模块                              |
-| 分区8    | 工作表模块                              |
-| 分区9    | 工作簿模块                              |
-| 分区10   | XML写入器（生成Excel文件各部分XML）            |
-| 分区11   | XML读取器（预留）                         |
-| 分区12   | 高级功能（预留）                           |
-| 分区13   | 公共API                              |
-| 分区14   | 初始化和清理                             |
+| 分区    | 内容                                 |
+| ----- | ---------------------------------- |
+| 分区1   | 常量定义（Excel规范、文件路径、XML命名空间、MIME类型等） |
+| 分区2   | 枚举定义（数据类型、工作表状态、边框、对齐、填充等）         |
+| 分区3   | 结构体定义和全局数据存储                       |
+| 分区4   | 工具函数（坐标转换、字符串处理、日期时间、XML/ZIP辅助）    |
+| 分区5   | XML常量模块                            |
+| 分区6   | 样式模块（字体、填充、边框、对齐、数字格式）             |
+| 分区6.5 | 数据验证模块                             |
+| 分区6.6 | 条件格式模块                             |
+| 分区6.7 | 图表模块                               |
+| 分区7   | 单元格模块                              |
+| 分区8   | 工作表模块                              |
+| 分区9   | 工作簿模块                              |
+| 分区10  | XML写入器（生成Excel文件各部分XML）            |
+| 分区11  | XML读取器                             |
+| 分区12  | 高级功能（列插入/删除）                       |
+| 分区13  | 公共API                              |
+| 分区14  | 初始化和清理                             |
 
 ## 版本历史
 
+### v2.6 (2026-04-22)
+
+- \[新增] 数据验证功能 (PbXls\_CreateDataValidation)，支持下拉列表、整数验证、小数验证等
+- \[新增] 条件格式功能 (PbXls\_CreateConditionalFormat)，支持单元格值比较、公式条件、颜色刻度
+- \[新增] 图表功能接口 (PbXls\_CreateChart, PbXls\_AddChartSeries)
+- \[新增] 完整测试套件 (FeaturesTest 等)
+
+### v2.5 (2026-04-22)
+
+- \[新增] 列插入功能 (PbXls\_InsertColumns)，支持在指定位置插入多列
+- \[新增] 列删除功能 (PbXls\_DeleteColumns)，支持删除指定范围内的列
+- \[新增] 列插入/删除时自动更新单元格位置、列宽和合并单元格范围
+- \[修复] PbXls\_Free遗漏清理新增的全局列表（数据验证、条件格式、图表）
+- \[新增] 完整测试套件 (ColumnTest 等)
+
+### v2.4 (2026-04-21)
+
+- \[新增] 便捷样式API (PbXls\_SetCellStyleWS)
+- \[修复] 边框XML写入时注释和代码同行的bug（导致无效的XML节点）
+- \[修复] fillId偏移问题（Excel保留前两个填充，用户fill从索引2开始）
+- \[优化] 所有测试文件转换为UTF-8 BOM格式，确保PureBasic兼容
+- \[新增] 完整测试套件 (StyleStepTest, FullStyleTest 等)
+
 ### v2.3 (2026-04-20)
 
-- \[重构] 项目重命名为PbXls，原PureXL更名为PbXls
 - \[修复] 修复UTF-8编码缓冲区溢出导致FreeMemory崩溃的问题
 - \[修复] 修复字符串类型单元格数据未写入XML的问题
 - \[修复] 修复Map访问语法错误（PureBasic Map正确访问方式）

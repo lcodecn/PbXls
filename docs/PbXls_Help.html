@@ -48,7 +48,7 @@
 
 <div class="header">
   <h1>PbXls Library</h1>
-  <div class="version">版本 2.3</div>
+  <div class="version">版本 2.6</div>
   <div class="author">作者: lcode.cn | 许可证: Apache 2.0</div>
 </div>
 
@@ -58,8 +58,13 @@
   <a href="#worksheet">工作表</a>
   <a href="#cell">单元格</a>
   <a href="#style">样式</a>
+  <a href="#columns">列操作</a>
+  <a href="#validation">数据验证</a>
+  <a href="#conditional">条件格式</a>
+  <a href="#charts">图表</a>
   <a href="#utility">工具函数</a>
   <a href="#examples">示例代码</a>
+  <a href="#changelog">版本历史</a>
 </div>
 
 <div class="container">
@@ -79,6 +84,10 @@
       <li>单元格样式（字体、填充、边框、对齐、数字格式）</li>
       <li>合并单元格</li>
       <li>行列宽高设置</li>
+      <li>列插入/删除（自动更新单元格、列宽、合并单元格）</li>
+      <li>数据验证（下拉列表、整数验证、小数验证等）</li>
+      <li>条件格式（单元格值比较、公式条件、颜色刻度）</li>
+      <li>图表支持（柱状图、折线图、饼图等）</li>
       <li>共享字符串表优化</li>
       <li>完整的 ZIP 压缩支持</li>
     </ul>
@@ -420,6 +429,206 @@
     </div>
   </div>
 
+  <!-- ==================== 列操作 ==================== -->
+  <div class="section" id="columns">
+    <h2>列操作</h2>
+
+    <div class="function-block" id="InsertColumns">
+      <div class="function-name">PbXls_InsertColumns(wsId.i, colIdx.i, count.i = 1)</div>
+      <div class="function-desc">在指定位置插入列。插入后，该列及右侧的所有单元格将向右移动，列宽和合并单元格范围会自动更新。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>工作表ID</td></tr>
+          <tr><td>colIdx</td><td>Integer</td><td>插入位置的列号（从1开始）</td></tr>
+          <tr><td>count</td><td>Integer</td><td>要插入的列数，默认为1</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+      <div class="example">
+<span class="comment">; 在第3列前插入2列</span>
+<span class="function">PbXls_InsertColumns</span>(<span class="variable">wsId</span>, 3, 2)
+<span class="comment">; 原来的C列及右侧所有列都向右移动2列</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="DeleteColumns">
+      <div class="function-name">PbXls_DeleteColumns(wsId.i, colIdx.i, count.i = 1)</div>
+      <div class="function-desc">删除指定列。删除后，右侧的单元格将向左移动，列宽和合并单元格范围会自动更新。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>工作表ID</td></tr>
+          <tr><td>colIdx</td><td>Integer</td><td>要删除的起始列号（从1开始）</td></tr>
+          <tr><td>count</td><td>Integer</td><td>要删除的列数，默认为1</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+      <div class="example">
+<span class="comment">; 删除第2列（B列）</span>
+<span class="function">PbXls_DeleteColumns</span>(<span class="variable">wsId</span>, 2, 1)
+<span class="comment">; 原来的C列及右侧所有列都向左移动1列</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 数据验证 ==================== -->
+  <div class="section" id="validation">
+    <h2>数据验证</h2>
+
+    <div class="function-block" id="CreateDataValidation">
+      <div class="function-name">PbXls_CreateDataValidation(type.s, sqref.s, formula1.s = "", formula2.s = "", operator.s = "between")</div>
+      <div class="function-desc">创建数据验证规则。支持多种验证类型：list（下拉列表）、whole（整数）、decimal（小数）、textLength（文本长度）、date（日期）、time（时间）、custom（自定义公式）。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>type</td><td>String</td><td>验证类型，如 "list"、"whole"、"decimal" 等</td></tr>
+          <tr><td>sqref</td><td>String</td><td>应用范围，如 "A1:A10"</td></tr>
+          <tr><td>formula1</td><td>String</td><td>公式或值（list类型用逗号分隔选项）</td></tr>
+          <tr><td>formula2</td><td>String</td><td>第二个公式（某些操作符需要）</td></tr>
+          <tr><td>operator</td><td>String</td><td>运算符，如 "between"、"greaterThan" 等</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 验证规则ID（整数）。</div>
+      <div class="example">
+<span class="comment">; 创建下拉列表验证</span>
+<span class="variable">dv1</span> = <span class="function">PbXls_CreateDataValidation</span>(<span class="string">"list"</span>, <span class="string">"B2:B10"</span>, <span class="string">"选项1,选项2,选项3"</span>)
+
+<span class="comment">; 创建整数范围验证</span>
+<span class="variable">dv2</span> = <span class="function">PbXls_CreateDataValidation</span>(<span class="string">"whole"</span>, <span class="string">"C2:C10"</span>, <span class="string">"18"</span>, <span class="string">"65"</span>, <span class="string">"between"</span>)
+      </div>
+    </div>
+
+    <div class="function-block" id="SetValidationPrompt">
+      <div class="function-name">PbXls_SetValidationPrompt(validationId.i, title.s, message.s)</div>
+      <div class="function-desc">设置数据验证的输入提示信息。当单元格获得焦点时显示。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>validationId</td><td>Integer</td><td>验证规则ID</td></tr>
+          <tr><td>title</td><td>String</td><td>提示标题</td></tr>
+          <tr><td>message</td><td>String</td><td>提示内容</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+    </div>
+
+    <div class="function-block" id="SetValidationError">
+      <div class="function-name">PbXls_SetValidationError(validationId.i, title.s, message.s)</div>
+      <div class="function-desc">设置数据验证的错误提示信息。当输入无效值时显示。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>validationId</td><td>Integer</td><td>验证规则ID</td></tr>
+          <tr><td>title</td><td>String</td><td>错误标题</td></tr>
+          <tr><td>message</td><td>String</td><td>错误内容</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+    </div>
+  </div>
+
+  <!-- ==================== 条件格式 ==================== -->
+  <div class="section" id="conditional">
+    <h2>条件格式</h2>
+
+    <div class="function-block" id="CreateConditionalFormat">
+      <div class="function-name">PbXls_CreateConditionalFormat(type.s, sqref.s, formula1.s = "", formula2.s = "", operator.s = "greaterThan")</div>
+      <div class="function-desc">创建条件格式规则。支持类型：cellIs（单元格值比较）、expression（公式）、colorScale（颜色刻度）、dataBar（数据条）、iconSet（图标集）。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>type</td><td>String</td><td>规则类型，如 "cellIs"、"expression"、"colorScale"</td></tr>
+          <tr><td>sqref</td><td>String</td><td>应用范围，如 "A1:A10"</td></tr>
+          <tr><td>formula1</td><td>String</td><td>公式或比较值</td></tr>
+          <tr><td>formula2</td><td>String</td><td>第二个公式</td></tr>
+          <tr><td>operator</td><td>String</td><td>运算符，如 "greaterThan"、"lessThan"、"between" 等</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 规则ID（整数）。</div>
+      <div class="example">
+<span class="comment">; 单元格值大于85时红色粗体</span>
+<span class="variable">cf1</span> = <span class="function">PbXls_CreateConditionalFormat</span>(<span class="string">"cellIs"</span>, <span class="string">"E2:E10"</span>, <span class="string">"85"</span>, <span class="string">""</span>, <span class="string">"greaterThan"</span>)
+<span class="function">PbXls_SetConditionalFormatDxf</span>(<span class="variable">cf1</span>, <span class="string">"FF0000"</span>, <span class="string">""</span>, <span class="variable">#True</span>, <span class="variable">#False</span>)
+
+<span class="comment">; 颜色刻度（红-黄-绿）</span>
+<span class="variable">cf2</span> = <span class="function">PbXls_CreateConditionalFormat</span>(<span class="string">"colorScale"</span>, <span class="string">"D2:D10"</span>)
+<span class="function">PbXls_SetConditionalFormatColorScale</span>(<span class="variable">cf2</span>, <span class="string">"FF0000"</span>, <span class="string">"FFFF00"</span>, <span class="string">"00FF00"</span>)
+      </div>
+    </div>
+
+    <div class="function-block" id="SetConditionalFormatDxf">
+      <div class="function-name">PbXls_SetConditionalFormatDxf(ruleId.i, fontColor.s = "", fillColor.s = "", fontBold.b = -1, fontItalic.b = -1)</div>
+      <div class="function-desc">设置条件格式的差异样式（Dxf），包括字体颜色、填充颜色、粗体和斜体。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>ruleId</td><td>Integer</td><td>规则ID</td></tr>
+          <tr><td>fontColor</td><td>String</td><td>字体颜色，如 "FF0000"（红色）</td></tr>
+          <tr><td>fillColor</td><td>String</td><td>填充颜色，如 "FFFF00"（黄色）</td></tr>
+          <tr><td>fontBold</td><td>Boolean</td><td>是否粗体（-1表示不变）</td></tr>
+          <tr><td>fontItalic</td><td>Boolean</td><td>是否斜体（-1表示不变）</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+    </div>
+
+    <div class="function-block" id="SetConditionalFormatColorScale">
+      <div class="function-name">PbXls_SetConditionalFormatColorScale(ruleId.i, minColor.s = "", midColor.s = "", maxColor.s = "", minType.s = "", midType.s = "", maxType.s = "")</div>
+      <div class="function-desc">设置颜色刻度的参数，包括最小/中间/最大颜色及其类型。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>ruleId</td><td>Integer</td><td>规则ID</td></tr>
+          <tr><td>minColor</td><td>String</td><td>最小值颜色</td></tr>
+          <tr><td>midColor</td><td>String</td><td>中间值颜色</td></tr>
+          <tr><td>maxColor</td><td>String</td><td>最大值颜色</td></tr>
+          <tr><td>minType</td><td>String</td><td>最小值类型，如 "min"、"num"、"percentile"</td></tr>
+          <tr><td>midType</td><td>String</td><td>中间值类型</td></tr>
+          <tr><td>maxType</td><td>String</td><td>最大值类型，如 "max"、"num"、"percentile"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+    </div>
+  </div>
+
+  <!-- ==================== 图表 ==================== -->
+  <div class="section" id="charts">
+    <h2>图表</h2>
+    <div class="note">
+      <strong>注意：</strong> 图表功能当前为接口实现，完整的XML生成逻辑将在后续版本中完善。
+    </div>
+
+    <div class="function-block" id="CreateChart">
+      <div class="function-name">PbXls_CreateChart(type.s, title.s = "", anchorRef.s = "A1:F20")</div>
+      <div class="function-desc">创建图表。支持类型：barChart（柱状图）、lineChart（折线图）、pieChart（饼图）、scatterChart（散点图）、areaChart（面积图）。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>type</td><td>String</td><td>图表类型</td></tr>
+          <tr><td>title</td><td>String</td><td>图表标题</td></tr>
+          <tr><td>anchorRef</td><td>String</td><td>锚定范围，如 "A1:F20"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 图表ID（整数）。</div>
+    </div>
+
+    <div class="function-block" id="AddChartSeries">
+      <div class="function-name">PbXls_AddChartSeries(chartId.i, name.s, values.s, categories.s = "")</div>
+      <div class="function-desc">添加图表数据系列。</div>
+      <div class="function-params">
+        <table>
+          <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+          <tr><td>chartId</td><td>Integer</td><td>图表ID</td></tr>
+          <tr><td>name</td><td>String</td><td>系列名称</td></tr>
+          <tr><td>values</td><td>String</td><td>值范围，如 "A2:A10"</td></tr>
+          <tr><td>categories</td><td>String</td><td>类别范围，如 "B2:B10"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>返回值：</strong> 成功返回 #True，失败返回 #False。</div>
+    </div>
+  </div>
+
   <!-- ==================== 工具函数 ==================== -->
   <div class="section" id="utility">
     <h2>工具函数</h2>
@@ -587,8 +796,186 @@
     </div>
   </div>
 
+  <!-- ==================== 版本历史 ==================== -->
+  <div class="section" id="changelog">
+    <h2>版本历史</h2>
+    
+    <h3>v2.6 (2026-04-22)</h3>
+    <ul>
+      <li>[新增] 数据验证功能 (PbXls_CreateDataValidation)，支持下拉列表、整数验证、小数验证等</li>
+      <li>[新增] 条件格式功能 (PbXls_CreateConditionalFormat)，支持单元格值比较、公式条件、颜色刻度</li>
+      <li>[新增] 图表功能接口 (PbXls_CreateChart, PbXls_AddChartSeries)</li>
+      <li>[新增] 完整测试套件 (FeaturesTest 等)</li>
+    </ul>
+
+    <h3>v2.5 (2026-04-22)</h3>
+    <ul>
+      <li>[新增] 列插入功能 (PbXls_InsertColumns)，支持在指定位置插入多列</li>
+      <li>[新增] 列删除功能 (PbXls_DeleteColumns)，支持删除指定范围内的列</li>
+      <li>[新增] 列插入/删除时自动更新单元格位置、列宽和合并单元格范围</li>
+      <li>[修复] PbXls_Free遗漏清理新增的全局列表（数据验证、条件格式、图表）</li>
+      <li>[新增] 完整测试套件 (ColumnTest 等)</li>
+    </ul>
+
+    <h3>v2.4 (2026-04-21)</h3>
+    <ul>
+      <li>[新增] 便捷样式API (PbXls_SetCellStyleWS)</li>
+      <li>[修复] 边框XML写入时注释和代码同行的bug（导致无效的XML节点）</li>
+      <li>[修复] fillId偏移问题（Excel保留前两个填充，用户fill从索引2开始）</li>
+      <li>[优化] 所有测试文件转换为UTF-8 BOM格式，确保PureBasic兼容</li>
+      <li>[新增] 完整测试套件 (StyleStepTest, FullStyleTest 等)</li>
+    </ul>
+
+    <h3>v2.3 (2026-04-20)</h3>
+    <ul>
+      <li>[修复] 修复UTF-8编码缓冲区溢出导致FreeMemory崩溃的问题</li>
+      <li>[修复] 修复字符串类型单元格数据未写入XML的问题</li>
+      <li>[修复] 修复Map访问语法错误（PureBasic Map正确访问方式）</li>
+      <li>[修复] 修复List参数声明语法</li>
+      <li>[新增] 添加完整的测试代码（10个测试项）</li>
+      <li>[新增] 添加详细的代码注释</li>
+      <li>[新增] 生成HTML帮助文档</li>
+      <li>[新增] 添加README.md文档</li>
+    </ul>
+
+    <h3>v2.2 (2026-04-14)</h3>
+    <ul>
+      <li>[优化] 优化XML生成性能，减少内存占用</li>
+      <li>[优化] 优化共享字符串表构建算法，提升大数据量处理速度</li>
+      <li>[修复] 修复XML节点属性设置时的前缀错误</li>
+      <li>[修复] 修复工作簿关系文件（workbook.xml.rels）生成逻辑</li>
+      <li>[新增] 添加单元格内联字符串（inlineStr）支持</li>
+    </ul>
+
+    <h3>v2.1 (2026-04-04)</h3>
+    <ul>
+      <li>[新增] 单元格样式模块（字体、填充、边框、对齐、数字格式）</li>
+      <li>[新增] 字体样式设置（字体名称、大小、颜色、粗体、斜体、下划线）</li>
+      <li>[新增] 填充样式设置（图案填充、前景色、背景色）</li>
+      <li>[新增] 边框样式设置（上、下、左、右边框样式和颜色）</li>
+      <li>[新增] 对齐样式设置（水平对齐、垂直对齐、文本换行）</li>
+      <li>[新增] 数字格式设置（内置数字格式、自定义数字格式）</li>
+      <li>[新增] 样式表XML生成（styles.xml）</li>
+    </ul>
+
+    <h3>v2.0 (2026-03-25)</h3>
+    <ul>
+      <li>[新增] 公式单元格支持（SetCellFormula函数）</li>
+      <li>[新增] 布尔类型单元格支持（true/false）</li>
+      <li>[新增] 日期时间类型单元格支持</li>
+      <li>[新增] 错误类型单元格支持</li>
+      <li>[新增] 单元格数据类型自动推断功能</li>
+      <li>[新增] 单元格类型枚举定义</li>
+      <li>[优化] 重构数据结构设计，使用全局Map/List替代结构体内嵌套</li>
+      <li>[修复] 修复公式单元格XML写入逻辑</li>
+    </ul>
+
+    <h3>v1.9 (2026-03-15)</h3>
+    <ul>
+      <li>[新增] 工作簿元数据支持（core.xml、app.xml）</li>
+      <li>[新增] 内容类型文件生成（[Content_Types].xml）</li>
+      <li>[新增] 根关系文件生成（_rels/.rels）</li>
+      <li>[新增] 工作簿关系文件生成（xl/_rels/workbook.xml.rels）</li>
+      <li>[新增] 文档属性设置（创建者、标题、描述、修改时间等）</li>
+      <li>[优化] 完善Office Open XML标准兼容性</li>
+    </ul>
+
+    <h3>v1.8 (2026-03-05)</h3>
+    <ul>
+      <li>[新增] 多工作表支持（AddWorksheet函数）</li>
+      <li>[新增] 工作表删除功能（DeleteWorksheet函数）</li>
+      <li>[新增] 按索引获取工作表（GetSheetByIndex函数）</li>
+      <li>[新增] 获取工作表数量功能（GetSheetCount函数）</li>
+      <li>[新增] 获取工作表名称功能（GetSheetTitle函数）</li>
+      <li>[新增] 工作表关系管理</li>
+      <li>[优化] 工作表ID管理系统</li>
+    </ul>
+
+    <h3>v1.7 (2026-02-23)</h3>
+    <ul>
+      <li>[新增] 工作表XML生成器（worksheet.xml）</li>
+      <li>[新增] 工作簿XML生成器（workbook.xml）</li>
+      <li>[新增] 共享字符串表XML生成器（sharedStrings.xml）</li>
+      <li>[新增] XML辅助函数（节点创建、属性设置、文本设置等）</li>
+      <li>[新增] XML保存为字符串功能</li>
+      <li>[新增] XML命名空间常量定义</li>
+      <li>[优化] XML生成代码模块化</li>
+    </ul>
+
+    <h3>v1.6 (2026-02-13)</h3>
+    <ul>
+      <li>[新增] 共享字符串表支持（Shared Strings Table）</li>
+      <li>[新增] 字符串去重优化，减少文件大小</li>
+      <li>[新增] 字符串索引映射功能</li>
+      <li>[新增] 共享字符串计数统计</li>
+      <li>[优化] 字符串存储方式，使用全局List替代结构体成员</li>
+    </ul>
+
+    <h3>v1.5 (2026-02-03)</h3>
+    <ul>
+      <li>[新增] 合并单元格功能（MergeCells函数）</li>
+      <li>[新增] 取消合并单元格功能（UnmergeCells函数）</li>
+      <li>[新增] 合并单元格XML节点生成（mergeCells）</li>
+      <li>[新增] 合并单元格范围解析</li>
+      <li>[优化] 工作表数据结构，支持合并单元格存储</li>
+    </ul>
+
+    <h3>v1.4 (2026-01-24)</h3>
+    <ul>
+      <li>[新增] 设置列宽功能（SetColumnWidth函数）</li>
+      <li>[新增] 设置行高功能（SetRowHeight函数）</li>
+      <li>[新增] 列宽XML节点生成（cols/col）</li>
+      <li>[新增] 行高XML属性生成（row ht属性）</li>
+      <li>[新增] 行列尺寸数据存储（全局Map）</li>
+    </ul>
+
+    <h3>v1.3 (2026-01-14)</h3>
+    <ul>
+      <li>[新增] 数值类型单元格支持</li>
+      <li>[新增] 数值自动识别（整数、浮点数）</li>
+      <li>[新增] 单元格数据类型枚举（字符串、数值等）</li>
+      <li>[新增] 数值单元格XML写入逻辑（v节点）</li>
+      <li>[优化] 单元格值存储方式</li>
+    </ul>
+
+    <h3>v1.2 (2026-01-04)</h3>
+    <ul>
+      <li>[新增] 批量追加行数据功能（AppendRow函数）</li>
+      <li>[新增] 工作表当前行跟踪</li>
+      <li>[新增] 工作表最大行/列自动更新</li>
+      <li>[新增] 单元格数据批量写入优化</li>
+      <li>[优化] 单元格访问性能，使用Map快速查找</li>
+    </ul>
+
+    <h3>v1.1 (2025-12-25)</h3>
+    <ul>
+      <li>[新增] 单元格写入功能（SetCell函数）</li>
+      <li>[新增] 字符串类型单元格支持</li>
+      <li>[新增] 单元格数据结构定义</li>
+      <li>[新增] 工作表数据结构定义</li>
+      <li>[新增] XML特殊字符转义功能（EscapeXML函数）</li>
+      <li>[新增] 列号与列字母互转功能（GetColumnLetter、ColumnIndexFromString）</li>
+    </ul>
+
+    <h3>v1.0 (2025-12-15)</h3>
+    <ul>
+      <li>[新增] 初始项目创建，参考openpyxl编写</li>
+      <li>[新增] 工作簿创建功能（CreateWorkbook函数）</li>
+      <li>[新增] 默认工作表自动创建</li>
+      <li>[新增] Excel规范常量定义（最大行列数等）</li>
+      <li>[新增] 文件路径常量定义</li>
+      <li>[新增] MIME类型常量定义</li>
+      <li>[新增] XML命名空间常量定义</li>
+      <li>[新增] 内置数字格式常量定义</li>
+      <li>[新增] 单元格类型枚举定义</li>
+      <li>[新增] 工作表状态枚举定义</li>
+      <li>[新增] ZIP打包支持（UseZipPacker、CreatePack等）</li>
+      <li>[新增] 初始化和清理函数（Init、Free）</li>
+    </ul>
+  </div>
+
   <div class="footer">
-    <p>PbXls Library v2.3 | 作者: lcode.cn | 许可证: Apache 2.0</p>
+    <p>PbXls Library v2.6 | 作者: lcode.cn | 许可证: Apache 2.0</p>
   </div>
 
 </div>

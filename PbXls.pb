@@ -1,10 +1,10 @@
 ﻿; ***************************************************************************************
 ; PbXls Library - Excel xlsx/xlsm 操作库
-; 版本: 2.3
-; 作者: lcode.cn
-; 许可证: Apache 2.0
+; 版本: 2.6
+; 作者 lcode.cn
+; 许可证 Apache 2.0
 ;
-; 说明: 无依赖操作Excel xlsx/xlsm文件的PureBASIC库
+; 说明: 无依赖操作Excel xlsx/xlsm文件的PureBasic库
 ;       使用PureBasic内置XML和Packer库
 ;       无需安装Microsoft Office或任何第三方依赖
 ;
@@ -20,7 +20,7 @@
 ;
 ; 文件结构:
 ;   分区1: 常量定义（Excel规范、文件路径、XML命名空间、MIME类型等）
-;   分区2: 枚举定义（数据类型、工作表状态、边框、对齐、填充等）
+;   分区2: 枚举定义（数据类型、工作状态、边框、对齐、填充等）
 ;   分区3: 结构体定义和全局数据存储
 ;   分区4: 工具函数（坐标转换、字符串处理、日期时间、XML/ZIP辅助）
 ;   分区5: XML常量模块
@@ -29,8 +29,8 @@
 ;   分区8: 工作表模块
 ;   分区9: 工作簿模块
 ;   分区10: XML写入器（生成Excel文件各部分XML）
-;   分区11: XML读取器（预留）
-;   分区12: 高级功能（预留）
+;   分区11: XML读取器（解析Excel文件各部分XML）
+;   分区12: 高级功能
 ;   分区13: 公共API
 ;   分区14: 初始化和清理
 ;   分区15: 测试代码
@@ -41,6 +41,8 @@ UseZipPacker()
 
 ; ***************************************************************************************
 ; 分区1: 常量定义
+
+; 1.1 Excel规范常量（定义Excel的最大行列数等限制）
 ; ***************************************************************************************
 
 ; 1.1 Excel规范常量（定义Excel的最大行列数等限制）
@@ -118,7 +120,7 @@ UseZipPacker()
 #PbXls_TypeInline = 6
 #PbXls_TypeError = 7
 
-; 1.6 内置数字格式常量（定义Excel内置的数字格式ID）
+; 1.6 内置数字格式常量（定义Excel内置的数字格式ID）?
 ;    包括通用格式、数值格式、百分比、科学计数法、分数、日期时间等
 #PbXls_NumFmtGeneral = 0
 #PbXls_NumFmt0 = 1
@@ -142,8 +144,8 @@ UseZipPacker()
 
 ; ***************************************************************************************
 ; 分区2: 枚举定义
-;    定义库中使用的各种枚举类型，包括数据类型、工作表状态、边框样式、
-;    对齐方式、填充模式和错误类型等
+;    定义库中使用的各种枚举类型，包括数据类型、工作表状态、边框样式、?
+;    对齐方式、填充模式和错误类型等?
 ; ***************************************************************************************
 
 Enumeration
@@ -339,12 +341,78 @@ Structure PbXls_Color
   tint.f
 EndStructure
 
+; 数据验证结构体
+Structure PbXls_DataValidation
+  type.s          ; "list", "whole", "decimal", "textLength", "date", "time", "custom"
+  operator.s      ; "between", "notBetween", "equal", "notEqual", "lessThan", "lessThanOrEqual", "greaterThan", "greaterThanOrEqual"
+  sqref.s         ; 单元格范围, 如 "A1:A10"
+  formula1.s      ; 公式或值列表(逗号分隔)
+  formula2.s      ; 第二个公式(某些操作符需要)
+  showErrorMessage.b
+  showInputMessage.b
+  allowBlank.b
+  errorTitle.s
+  error.s
+  promptTitle.s
+  prompt.s
+  showDropDown.b  ; 是否隐藏下拉箭头
+EndStructure
+
+; 条件格式规则结构体
+Structure PbXls_ConditionalFormatRule
+  type.s          ; "cellIs", "expression", "colorScale", "dataBar", "iconSet"
+  operator.s      ; 用于cellIs类型
+  priority.i      ; 优先级
+  sqref.s         ; 应用范围, 如 "A1:A10"
+  formula1.s      ; 公式或值
+  formula2.s      ; 第二个公式
+  ; Dxf差异样式
+  dxfFontName.s
+  dxfFontSize.f
+  dxfFontColor.s
+  dxfFontBold.b
+  dxfFontItalic.b
+  dxfFillColor.s
+  dxfFillPattern.s
+  ; colorScale/dataBar/iconSet参数
+  minType.s
+  minValue.s
+  maxType.s
+  maxValue.s
+  midType.s
+  midValue.s
+  minColor.s
+  midColor.s
+  maxColor.s
+EndStructure
+
+; 图表系列数据(使用全局Map存储)
+Global NewMap PbXls_ChartSeriesName.s()
+Global NewMap PbXls_ChartSeriesValues.s()
+Global NewMap PbXls_ChartSeriesCategories.s()
+
+; 图表结构体
+Structure PbXls_Chart
+  title.s
+  type.s          ; "barChart", "lineChart", "pieChart", "scatterChart", "areaChart"
+  style.i         ; 图表样式(1-48)
+  x.i             ; 绘图位置X(EM单位)
+  y.i             ; 绘图位置Y(EM单位)
+  cx.i            ; 宽度(EM单位)
+  cy.i            ; 高度(EM单位)
+  anchorRef.s     ; 锚定单元格范围, 如 "A1:F20"
+  seriesCount.i   ; 数据系列数量
+EndStructure
+
 ; 全局数据存储
 Global NewMap PbXls_AllCells.PbXls_Cell()
 Global NewMap PbXls_ColumnWidths.f()
 Global NewMap PbXls_RowHeights.f()
 Global NewMap PbXls_MergedCells.s()
 Global NewMap PbXls_MergedCellCount.i()
+Global NewList PbXls_DataValidations.PbXls_DataValidation()
+Global NewList PbXls_ConditionalFormats.PbXls_ConditionalFormatRule()
+Global NewList PbXls_Charts.PbXls_Chart()
 Global NewList PbXls_Fonts.PbXls_Font()
 Global NewList PbXls_Fills.PbXls_Fill()
 Global NewList PbXls_Borders.PbXls_Border()
@@ -354,12 +422,14 @@ Global NewList PbXls_SharedStrings.s()
 Global NewList PbXls_Workbooks.PbXls_Workbook()
 Global NewMap PbXls_WorkbookSheetCount.i()
 Global NewMap PbXls_WorkbookSharedStrings.i()
+Global PbXls_DxfCounter.i = 0
+Global PbXls_ChartCounter.i = 0
 
 ; ***************************************************************************************
 ; 分区4: 工具函数
 ; ***************************************************************************************
 
-; GetColumnLetter - 列号转字母 (1->"A", 27->"AA")
+; GetColumnLetter - 鍒楀彿杞瓧姣?(1->"A", 27->"AA")
 Procedure.s PbXls_GetColumnLetter(colIdx.i)
   If colIdx < 1 Or colIdx > 18278
     ProcedureReturn ""
@@ -379,7 +449,7 @@ Procedure.s PbXls_GetColumnLetter(colIdx.i)
   ProcedureReturn result
 EndProcedure
 
-; ColumnIndexFromString - 字母转列号 ("A"->1, "AA"->27)
+; ColumnIndexFromString - 瀛楁瘝杞垪鍙?("A"->1, "AA"->27)
 Procedure.i PbXls_ColumnIndexFromString(col.s)
   col = Trim(UCase(col))
   Define length.i = Len(col)
@@ -401,7 +471,7 @@ Procedure.i PbXls_ColumnIndexFromString(col.s)
   ProcedureReturn result
 EndProcedure
 
-; CoordinateToTuple - 坐标转行列元组 ("A1"->(1,1))
+; CoordinateToTuple - 鍧愭爣杞鍒楀厓缁?("A1"->(1,1))
 Procedure.i PbXls_CoordinateToTuple(coord.s, *row.Integer, *col.Integer)
   coord = Trim(UCase(coord))
   Define length.i = Len(coord)
@@ -430,7 +500,7 @@ Procedure.i PbXls_CoordinateToTuple(coord.s, *row.Integer, *col.Integer)
   ProcedureReturn #True
 EndProcedure
 
-; RangeBoundaries - 范围解析 ("A1:D5"->(1,1,4,5))
+; RangeBoundaries - 鑼冨洿瑙ｆ瀽 ("A1:D5"->(1,1,4,5))
 Procedure.i PbXls_RangeBoundaries(rangeStr.s, *minCol.Integer, *minRow.Integer, *maxCol.Integer, *maxRow.Integer)
   rangeStr = Trim(UCase(rangeStr))
   Define colonPos.i = FindString(rangeStr, ":", 1)
@@ -464,17 +534,17 @@ Procedure.i PbXls_RangeBoundaries(rangeStr.s, *minCol.Integer, *minRow.Integer, 
   ProcedureReturn #True
 EndProcedure
 
-; CoordinateFromRowCol - 行列转坐标 (1,1->"A1")
+; CoordinateFromRowCol - 琛屽垪杞潗鏍?(1,1->"A1")
 Procedure.s PbXls_CoordinateFromRowCol(row.i, col.i)
   ProcedureReturn PbXls_GetColumnLetter(col) + Str(row)
 EndProcedure
 
-; RangeString - 生成范围字符串
+; RangeString - 鐢熸垚鑼冨洿瀛楃涓?
 Procedure.s PbXls_RangeString(minRow.i, minCol.i, maxRow.i, maxCol.i)
   ProcedureReturn PbXls_CoordinateFromRowCol(minRow, minCol) + ":" + PbXls_CoordinateFromRowCol(maxRow, maxCol)
 EndProcedure
 
-; QuoteSheetName - 为包含特殊字符的工作表名添加引号
+; QuoteSheetName - 涓哄寘鍚壒娈婂瓧绗︾殑宸ヤ綔琛ㄥ悕娣诲姞寮曞彿
 Procedure.s PbXls_QuoteSheetName(sheetName.s)
   If FindString(sheetName, " ", 1) Or FindString(sheetName, "'", 1)
     sheetName = ReplaceString(sheetName, "'", "''")
@@ -483,7 +553,7 @@ Procedure.s PbXls_QuoteSheetName(sheetName.s)
   ProcedureReturn sheetName
 EndProcedure
 
-; EscapeXML - 转义XML特殊字符
+; EscapeXML - 杞箟XML鐗规畩瀛楃
 Procedure.s PbXls_EscapeXML(text.s)
   text = ReplaceString(text, "&", "&amp;")
   text = ReplaceString(text, "<", "&lt;")
@@ -493,7 +563,7 @@ Procedure.s PbXls_EscapeXML(text.s)
   ProcedureReturn text
 EndProcedure
 
-; UnescapeXML - 反转义XML特殊字符
+; UnescapeXML - 鍙嶈浆涔塜ML鐗规畩瀛楃
 Procedure.s PbXls_UnescapeXML(text.s)
   text = ReplaceString(text, "&amp;", "&")
   text = ReplaceString(text, "&lt;", "<")
@@ -503,7 +573,7 @@ Procedure.s PbXls_UnescapeXML(text.s)
   ProcedureReturn text
 EndProcedure
 
-; IsNumeric - 检查是否为数字
+; IsNumeric - 妫€鏌ユ槸鍚︿负鏁板瓧
 Procedure.b PbXls_IsNumeric(text.s)
   text = Trim(text)
   If text = ""
@@ -542,7 +612,7 @@ Procedure.b PbXls_IsBoolean(text.s)
   ProcedureReturn #False
 EndProcedure
 
-; IsDate - 检查是否为日期格式
+; IsDate - 妫€鏌ユ槸鍚︿负鏃ユ湡鏍煎紡
 Procedure.b PbXls_IsDate(text.s)
   If Len(text) >= 8
     Define date.i = ParseDate("%yyyy-%mm-%dd", text)
@@ -559,7 +629,7 @@ Procedure.b PbXls_IsDate(text.s)
   ProcedureReturn #False
 EndProcedure
 
-; IsFormula - 检查是否为公式
+; IsFormula - 妫€鏌ユ槸鍚︿负鍏紡
 Procedure.b PbXls_IsFormula(text.s)
   text = Trim(text)
   If Len(text) > 1 And Mid(text, 1, 1) = "="
@@ -568,7 +638,7 @@ Procedure.b PbXls_IsFormula(text.s)
   ProcedureReturn #False
 EndProcedure
 
-; DateToExcel - PureBASIC日期转Excel日期数字
+; DateToExcel - PureBASIC鏃ユ湡杞珽xcel鏃ユ湡鏁板瓧
 Procedure.f PbXls_DateToExcel(pbDate.i)
   Define baseDate.i = ParseDate("%yyyy-%mm-%dd %hh:%nn:%ss", "1899-12-30 00:00:00")
   If baseDate = 0
@@ -582,7 +652,7 @@ Procedure.f PbXls_DateToExcel(pbDate.i)
   ProcedureReturn days
 EndProcedure
 
-; ExcelToDate - Excel日期数字转PureBASIC日期
+; ExcelToDate - Excel鏃ユ湡鏁板瓧杞琍ureBASIC鏃ユ湡
 Procedure.i PbXls_ExcelToDate(excelDate.f)
   Define baseDate.i = ParseDate("%yyyy-%mm-%dd %hh:%nn:%ss", "1899-12-30 00:00:00")
   If baseDate = 0
@@ -597,13 +667,13 @@ Procedure.i PbXls_ExcelToDate(excelDate.f)
   ProcedureReturn resultDate
 EndProcedure
 
-; GetCurrentDateTime - 获取当前日期时间
+; GetCurrentDateTime - 鑾峰彇褰撳墠鏃ユ湡鏃堕棿
 Procedure.s PbXls_GetCurrentDateTime()
   Define now.i = Date()
   ProcedureReturn FormatDate("%yyyy-%mm-%ddT%hh:%nn:%ss", now)
 EndProcedure
 
-; XML辅助函数
+; XML杈呭姪鍑芥暟
 Procedure.i PbXls_XMLCreateDocument()
   ProcedureReturn CreateXML(#PB_Any)
 EndProcedure
@@ -626,6 +696,19 @@ EndProcedure
 
 Procedure.s PbXls_XMLGetText(node.i)
   ProcedureReturn GetXMLNodeText(node)
+EndProcedure
+
+Procedure.s PbXls_ReadFileToString(filename.s)
+  If FileSize(filename) = -1
+    ProcedureReturn ""
+  EndIf
+  Define file.i = ReadFile(#PB_Any, filename)
+  If file = 0
+    ProcedureReturn ""
+  EndIf
+  Define content.s = ReadString(file, #PB_UTF8)
+  CloseFile(file)
+  ProcedureReturn content
 EndProcedure
 
 Procedure.s PbXls_XMLSaveToString(xmlId.i)
@@ -677,7 +760,7 @@ Procedure.s PbXls_XMLGetNodeName(node.i)
   ProcedureReturn GetXMLNodeName(node)
 EndProcedure
 
-; ZIP辅助函数
+; ZIP杈呭姪鍑芥暟
 Procedure.i PbXls_ZIPCreate(filename.s)
   ProcedureReturn CreatePack(#PB_Any, filename)
 EndProcedure
@@ -734,7 +817,7 @@ Procedure.i PbXls_ZIPExtractToMemory(packId.i, *buffer, bufferSize.i)
 EndProcedure
 
 ; ***************************************************************************************
-; 分区5: XML常量模块
+; 分区5: XML甯搁噺妯″潡
 ; ***************************************************************************************
 
 Procedure.s PbXls_GetNamespaceMappings()
@@ -761,7 +844,7 @@ Procedure.s PbXls_GetRelationshipNamespace()
 EndProcedure
 
 ; ***************************************************************************************
-; 分区6: 样式模块
+; 分区6: 鏍峰紡妯″潡
 ; ***************************************************************************************
 
 Procedure.i PbXls_CreateFont()
@@ -801,17 +884,19 @@ Procedure.b PbXls_SetFont(fontId.i, name.s = "", size.f = -1, bold.b = -1, itali
 EndProcedure
 
 Procedure.i PbXls_CreateFill()
-  Define fillId.i = ListSize(PbXls_Fills())
+  Define fillId.i = ListSize(PbXls_Fills()) + 2
   AddElement(PbXls_Fills())
   PbXls_Fills()\patternType = "none"
   ProcedureReturn fillId
 EndProcedure
 
 Procedure.b PbXls_SetFill(fillId.i, patternType.s = "", fgColor.s = "", bgColor.s = "")
-  If fillId < 0 Or fillId >= ListSize(PbXls_Fills())
+  ; fillId 偏移2（前两个是Excel保留的默认填充）
+  Define listIdx.i = fillId - 2
+  If listIdx < 0 Or listIdx >= ListSize(PbXls_Fills())
     ProcedureReturn #False
   EndIf
-  SelectElement(PbXls_Fills(), fillId)
+  SelectElement(PbXls_Fills(), listIdx)
   If patternType <> ""
     PbXls_Fills()\patternType = patternType
   EndIf
@@ -967,6 +1052,150 @@ Procedure.s PbXls_FormatColor(color.s)
 EndProcedure
 
 ; ***************************************************************************************
+; 分区6.5: 数据验证模块
+; ***************************************************************************************
+
+; PbXls_CreateDataValidation - 创建数据验证规则
+; 参数: type="list"(下拉列表)/"whole"(整数)/"decimal"(小数)/"textLength"(文本长度)/"date"/"time"/"custom"(公式)
+; 返回: 验证规则ID(列表索引)
+Procedure.i PbXls_CreateDataValidation(type.s, sqref.s, formula1.s = "", formula2.s = "", operator.s = "between")
+  AddElement(PbXls_DataValidations())
+  PbXls_DataValidations()\type = type
+  PbXls_DataValidations()\sqref = sqref
+  PbXls_DataValidations()\formula1 = formula1
+  PbXls_DataValidations()\formula2 = formula2
+  PbXls_DataValidations()\operator = operator
+  PbXls_DataValidations()\showErrorMessage = #True
+  PbXls_DataValidations()\showInputMessage = #True
+  PbXls_DataValidations()\allowBlank = #True
+  PbXls_DataValidations()\showDropDown = #False
+  ProcedureReturn ListIndex(PbXls_DataValidations())
+EndProcedure
+
+; PbXls_SetValidationPrompt - 设置输入提示
+Procedure.b PbXls_SetValidationPrompt(validationId.i, title.s, message.s)
+  If validationId < 0 Or validationId >= ListSize(PbXls_DataValidations())
+    ProcedureReturn #False
+  EndIf
+  SelectElement(PbXls_DataValidations(), validationId)
+  PbXls_DataValidations()\promptTitle = title
+  PbXls_DataValidations()\prompt = message
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_SetValidationError - 设置错误提示
+Procedure.b PbXls_SetValidationError(validationId.i, title.s, message.s)
+  If validationId < 0 Or validationId >= ListSize(PbXls_DataValidations())
+    ProcedureReturn #False
+  EndIf
+  SelectElement(PbXls_DataValidations(), validationId)
+  PbXls_DataValidations()\errorTitle = title
+  PbXls_DataValidations()\error = message
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_SetValidationFlags - 设置验证标志
+Procedure.b PbXls_SetValidationFlags(validationId.i, allowBlank.b = -1, showErrorMessage.b = -1, showInputMessage.b = -1, showDropDown.b = -1)
+  If validationId < 0 Or validationId >= ListSize(PbXls_DataValidations())
+    ProcedureReturn #False
+  EndIf
+  SelectElement(PbXls_DataValidations(), validationId)
+  If allowBlank >= 0 : PbXls_DataValidations()\allowBlank = allowBlank : EndIf
+  If showErrorMessage >= 0 : PbXls_DataValidations()\showErrorMessage = showErrorMessage : EndIf
+  If showInputMessage >= 0 : PbXls_DataValidations()\showInputMessage = showInputMessage : EndIf
+  If showDropDown >= 0 : PbXls_DataValidations()\showDropDown = showDropDown : EndIf
+  ProcedureReturn #True
+EndProcedure
+
+; ***************************************************************************************
+; 分区6.6: 条件格式模块
+; ***************************************************************************************
+
+; PbXls_CreateConditionalFormat - 创建条件格式规则
+; 参数: type="cellIs"(单元格值比较)/"expression"(公式)/"colorScale"(颜色刻度)/"dataBar"(数据条)/"iconSet"(图标集)
+; 返回: 规则ID(列表索引)
+Procedure.i PbXls_CreateConditionalFormat(type.s, sqref.s, formula1.s = "", formula2.s = "", operator.s = "greaterThan")
+  AddElement(PbXls_ConditionalFormats())
+  PbXls_ConditionalFormats()\type = type
+  PbXls_ConditionalFormats()\sqref = sqref
+  PbXls_ConditionalFormats()\formula1 = formula1
+  PbXls_ConditionalFormats()\formula2 = formula2
+  PbXls_ConditionalFormats()\operator = operator
+  PbXls_ConditionalFormats()\priority = ListSize(PbXls_ConditionalFormats())
+  PbXls_ConditionalFormats()\minType = "num"
+  PbXls_ConditionalFormats()\maxType = "num"
+  PbXls_ConditionalFormats()\minColor = "FFFF0000"
+  PbXls_ConditionalFormats()\maxColor = "FF00CC00"
+  PbXls_ConditionalFormats()\midColor = "FFFFFF00"
+  PbXls_ConditionalFormats()\midType = "num"
+  PbXls_DxfCounter + 1
+  ProcedureReturn ListIndex(PbXls_ConditionalFormats())
+EndProcedure
+
+; PbXls_SetConditionalFormatDxf - 设置条件格式的差异样式
+Procedure.b PbXls_SetConditionalFormatDxf(ruleId.i, fontColor.s = "", fillColor.s = "", fontBold.b = -1, fontItalic.b = -1)
+  If ruleId < 0 Or ruleId >= ListSize(PbXls_ConditionalFormats())
+    ProcedureReturn #False
+  EndIf
+  SelectElement(PbXls_ConditionalFormats(), ruleId)
+  If fontColor <> "" : PbXls_ConditionalFormats()\dxfFontColor = fontColor : EndIf
+  If fillColor <> "" : PbXls_ConditionalFormats()\dxfFillColor = fillColor : EndIf
+  If fontBold >= 0 : PbXls_ConditionalFormats()\dxfFontBold = fontBold : EndIf
+  If fontItalic >= 0 : PbXls_ConditionalFormats()\dxfFontItalic = fontItalic : EndIf
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_SetConditionalFormatColorScale - 设置颜色刻度参数
+Procedure.b PbXls_SetConditionalFormatColorScale(ruleId.i, minColor.s = "", midColor.s = "", maxColor.s = "", minType.s = "", midType.s = "", maxType.s = "")
+  If ruleId < 0 Or ruleId >= ListSize(PbXls_ConditionalFormats())
+    ProcedureReturn #False
+  EndIf
+  SelectElement(PbXls_ConditionalFormats(), ruleId)
+  If minColor <> "" : PbXls_ConditionalFormats()\minColor = minColor : EndIf
+  If midColor <> "" : PbXls_ConditionalFormats()\midColor = midColor : EndIf
+  If maxColor <> "" : PbXls_ConditionalFormats()\maxColor = maxColor : EndIf
+  If minType <> "" : PbXls_ConditionalFormats()\minType = minType : EndIf
+  If midType <> "" : PbXls_ConditionalFormats()\midType = midType : EndIf
+  If maxType <> "" : PbXls_ConditionalFormats()\maxType = maxType : EndIf
+  ProcedureReturn #True
+EndProcedure
+
+; ***************************************************************************************
+; 分区6.7: 图表模块
+; ***************************************************************************************
+
+; PbXls_CreateChart - 创建图表
+; 参数: type="barChart"(柱状图)/"lineChart"(折线图)/"pieChart"(饼图)/"scatterChart"(散点图)/"areaChart"(面积图)
+; 返回: 图表ID
+Procedure.i PbXls_CreateChart(type.s, title.s = "", anchorRef.s = "A1:F20")
+  AddElement(PbXls_Charts())
+  PbXls_Charts()\type = type
+  PbXls_Charts()\title = title
+  PbXls_Charts()\anchorRef = anchorRef
+  PbXls_Charts()\style = 2
+  PbXls_Charts()\x = 0
+  PbXls_Charts()\y = 0
+  PbXls_Charts()\cx = 6000000
+  PbXls_Charts()\cy = 4000000
+  PbXls_ChartCounter + 1
+  ProcedureReturn ListIndex(PbXls_Charts())
+EndProcedure
+
+; PbXls_AddChartSeries - 添加图表数据系列
+Procedure.b PbXls_AddChartSeries(chartId.i, name.s, values.s, categories.s = "")
+  If chartId < 0 Or chartId >= ListSize(PbXls_Charts())
+    ProcedureReturn #False
+  EndIf
+  SelectElement(PbXls_Charts(), chartId)
+  Define seriesKey.s = Str(chartId) + "_" + Str(PbXls_Charts()\seriesCount)
+  PbXls_ChartSeriesName(seriesKey) = name
+  PbXls_ChartSeriesValues(seriesKey) = values
+  PbXls_ChartSeriesCategories(seriesKey) = categories
+  PbXls_Charts()\seriesCount + 1
+  ProcedureReturn #True
+EndProcedure
+
+; ***************************************************************************************
 ; 分区7: 单元格模块
 ; ***************************************************************************************
 
@@ -1044,6 +1273,14 @@ Procedure.b PbXls_SetCellStyle(*cell.PbXls_Cell, styleId.i)
   ProcedureReturn #True
 EndProcedure
 
+Procedure.b PbXls_SetCellHyperlink(*cell.PbXls_Cell, url.s, tooltip.s = "")
+  *cell\hyperlink = url
+  If tooltip <> ""
+    *cell\comment = tooltip
+  EndIf
+  ProcedureReturn #True
+EndProcedure
+
 Procedure.i PbXls_GetCellStyle(*cell.PbXls_Cell)
   ProcedureReturn *cell\styleId
 EndProcedure
@@ -1070,6 +1307,19 @@ Procedure.i PbXls_GetCell(*ws.PbXls_Worksheet, row.i, col.i)
     EndIf
     ProcedureReturn *newCell
   EndIf
+EndProcedure
+
+; PbXls_SetCellStyleWS - 设置单元格样式（便捷版本，使用worksheet指针）
+Procedure.b PbXls_SetCellStyleWS(worksheet.i, row.i, col.i, styleId.i)
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  Define *cell.PbXls_Cell = PbXls_GetCell(*ws, row, col)
+  If *cell = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_SetCellStyle(*cell, styleId)
 EndProcedure
 
 Procedure.b PbXls_SetCell(*ws.PbXls_Worksheet, row.i, col.i, value.s)
@@ -1167,6 +1417,610 @@ EndProcedure
 
 Procedure.b PbXls_SetAutoFilter(*ws.PbXls_Worksheet, range.s)
   *ws\autoFilter = UCase(range)
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_SetPageMargins - 设置页边距 (参考openpyxl: worksheet/page.py PageMargins)
+; left, right, top, bottom 单位: 英寸 (默认 0.7, 0.7, 0.75, 0.75)
+; header, footer 单位: 英寸 (默认 0.3, 0.3)
+Procedure.b PbXls_SetPageMargins(*ws.PbXls_Worksheet, left.f = 0.7, right.f = 0.7, top.f = 0.75, bottom.f = 0.75, header.f = 0.3, footer.f = 0.3)
+  ; 存储到工作表结构中 (需要使用Map存储，因为PbXls_Worksheet没有这些字段)
+  Define marginKey.s = "margins_" + Str(*ws\id)
+  PbXls_ColumnWidths(marginKey + "_left") = left
+  PbXls_ColumnWidths(marginKey + "_right") = right
+  PbXls_ColumnWidths(marginKey + "_top") = top
+  PbXls_ColumnWidths(marginKey + "_bottom") = bottom
+  PbXls_ColumnWidths(marginKey + "_header") = header
+  PbXls_ColumnWidths(marginKey + "_footer") = footer
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_SetHeaderFooter - 设置页眉页脚 (参考openpyxl: worksheet/header_footer.py)
+; header/footer 格式: &C居中 &L左 &R右, 例如: "&C标题 &L页码"
+Procedure.b PbXls_SetHeaderFooter(*ws.PbXls_Worksheet, header.s = "", footer.s = "")
+  Define hfKey.s = "hf_" + Str(*ws\id)
+  PbXls_MergedCells(hfKey + "_header") = header
+  PbXls_MergedCells(hfKey + "_footer") = footer
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_SetPrintOptions - 设置打印选项 (参考openpyxl: worksheet/_writer.py write_print)
+; gridLines: 显示网格线, headings: 显示行列标题, horizontalCentered: 水平居中, verticalCentered: 垂直居中
+Procedure.b PbXls_SetPrintOptions(*ws.PbXls_Worksheet, gridLines.b = #True, headings.b = #False, horizontalCentered.b = #False, verticalCentered.b = #False)
+  Define poKey.s = "print_" + Str(*ws\id)
+  PbXls_MergedCells(poKey + "_gridLines") = Str(gridLines)
+  PbXls_MergedCells(poKey + "_headings") = Str(headings)
+  PbXls_MergedCells(poKey + "_hCentered") = Str(horizontalCentered)
+  PbXls_MergedCells(poKey + "_vCentered") = Str(verticalCentered)
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_SetOrientation - 设置页面方向 (portrait/landscape)
+Procedure.b PbXls_SetOrientation(*ws.PbXls_Worksheet, orientation.s)
+  *ws\orientation = LCase(orientation)
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_SetPaperSize - 设置纸张大小 (9=A4, 1=Letter, 等)
+Procedure.b PbXls_SetPaperSize(*ws.PbXls_Worksheet, paperSize.i)
+  *ws\paperSize = paperSize
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_SetCellComment - 设置单元格注释 (参考openpyxl: comments/comments.py)
+; 注意: 当前版本注释只作为提示文本存储在单元格中
+Procedure.b PbXls_SetCellComment(*ws.PbXls_Worksheet, row.i, col.i, content.s, author.s = "")
+  If row < 1 Or col < 1
+    ProcedureReturn #False
+  EndIf
+  Define *cell.PbXls_Cell = PbXls_GetCell(*ws, row, col)
+  If *cell = 0
+    ProcedureReturn #False
+  EndIf
+  ; 存储注释到单元格 (如果已有超链接，不覆盖)
+  If *cell\hyperlink = ""
+    If author <> ""
+      *cell\comment = author + ":" + content
+    Else
+      *cell\comment = content
+    EndIf
+  EndIf
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_UpdateRangeRows - 鏇存柊鑼冨洿涓殑琛屽彿(鐢ㄤ簬鎻掑叆/鍒犻櫎琛屾椂更新合并单元格
+Procedure.s PbXls_UpdateRangeRows(rangeStr.s, rowIdx.i, count.i, isInsert.b)
+  Define minCol.i, minRow.i, maxCol.i, maxRow.i
+  Define minCol2.Integer, minRow2.Integer, maxCol2.Integer, maxRow2.Integer
+  If PbXls_RangeBoundaries(rangeStr, @minCol2, @minRow2, @maxCol2, @maxRow2) = #False
+    ProcedureReturn ""
+  EndIf
+  minCol = minCol2\i
+  minRow = minRow2\i
+  maxCol = maxCol2\i
+  maxRow = maxRow2\i
+  
+  If isInsert
+    If minRow >= rowIdx
+      minRow = minRow + count
+    EndIf
+    If maxRow >= rowIdx
+      maxRow = maxRow + count
+    EndIf
+  Else
+    If minRow > rowIdx + count - 1
+      minRow = minRow - count
+    ElseIf minRow >= rowIdx
+      minRow = rowIdx
+    EndIf
+    If maxRow > rowIdx + count - 1
+      maxRow = maxRow - count
+    ElseIf maxRow >= rowIdx
+      maxRow = rowIdx + count - 1
+    EndIf
+    If maxRow < minRow
+      ProcedureReturn ""
+    EndIf
+  EndIf
+  
+  ProcedureReturn PbXls_RangeString(minRow, minCol, maxRow, maxCol)
+EndProcedure
+
+; PbXls_UpdateRangeCols - 更新合并单元格范围中的列号
+; 参考PbXls_UpdateRangeRows
+Procedure.s PbXls_UpdateRangeCols(rangeStr.s, colIdx.i, count.i, isInsert.b)
+  Define minCol.i, minRow.i, maxCol.i, maxRow.i
+  Define minCol2.Integer, minRow2.Integer, maxCol2.Integer, maxRow2.Integer
+  If PbXls_RangeBoundaries(rangeStr, @minCol2, @minRow2, @maxCol2, @maxRow2) = #False
+    ProcedureReturn ""
+  EndIf
+  minCol = minCol2\i
+  minRow = minRow2\i
+  maxCol = maxCol2\i
+  maxRow = maxRow2\i
+  
+  If isInsert
+    If minCol >= colIdx
+      minCol = minCol + count
+    EndIf
+    If maxCol >= colIdx
+      maxCol = maxCol + count
+    EndIf
+  Else
+    If minCol > colIdx + count - 1
+      minCol = minCol - count
+    ElseIf minCol >= colIdx
+      minCol = colIdx
+    EndIf
+    If maxCol > colIdx + count - 1
+      maxCol = maxCol - count
+    ElseIf maxCol >= colIdx
+      maxCol = colIdx + count - 1
+    EndIf
+    If maxCol < minCol
+      ProcedureReturn ""
+    EndIf
+  EndIf
+  
+  ProcedureReturn PbXls_RangeString(minRow, minCol, maxRow, maxCol)
+EndProcedure
+
+; PbXls_InsertColumns - 在指定列前插入空列
+; 参考openpyxl: worksheet/worksheet.py insert_cols方法
+Procedure.b PbXls_InsertColumns(*ws.PbXls_Worksheet, colIdx.i, count.i = 1)
+  If colIdx < 1 Or count < 1
+    ProcedureReturn #False
+  EndIf
+  
+  Define wsKey.s = Str(*ws\id) + "_"
+  Define wsKeyLen.i = Len(wsKey)
+  
+  ; 1. 收集所有需要移动的单元格（按列号降序排序以避免覆盖）
+  Define NewMap cellColMap.i()
+  Define NewList cellsToMove.s()
+  ForEach PbXls_AllCells()
+    Define ck.s = MapKey(PbXls_AllCells())
+    If Left(ck, Len(wsKey)) = wsKey
+      Define cellPart.s = Mid(ck, wsKeyLen + 1)
+      Define commaPos.i = FindString(cellPart, ",", 1)
+      If commaPos > 0
+        Define c.i = Val(Mid(cellPart, commaPos + 1))
+        If c >= colIdx
+          cellColMap(ck) = c
+        EndIf
+      EndIf
+    EndIf
+  Next
+  
+  ; 按列号降序排序
+  Define maxPossibleCol.i = *ws\maxColumn + count + 100
+  For i = maxPossibleCol To colIdx Step -1
+    ForEach cellColMap()
+      If cellColMap() = i
+        AddElement(cellsToMove())
+        cellsToMove() = MapKey(cellColMap())
+      EndIf
+    Next
+  Next
+  
+  ; 移动单元格
+  ResetList(cellsToMove())
+  While NextElement(cellsToMove())
+    Define oldKey.s = cellsToMove()
+    Define oldCellPart.s = Mid(oldKey, wsKeyLen + 1)
+    Define oldCommaPos.i = FindString(oldCellPart, ",", 1)
+    Define oldRow.i = Val(Left(oldCellPart, oldCommaPos - 1))
+    Define oldCol.i = Val(Mid(oldCellPart, oldCommaPos + 1))
+    
+    Define newCol.i = oldCol + count
+    Define newKey.s = wsKey + Str(oldRow) + "," + Str(newCol)
+    
+    ; 创建新的单元格并复制数据
+    Define *newCell.PbXls_Cell = @PbXls_AllCells(newKey)
+    CopyStructure(@PbXls_AllCells(oldKey), *newCell, PbXls_Cell)
+    *newCell\column = newCol
+    
+    ; 删除旧的单元格
+    DeleteMapElement(PbXls_AllCells(), oldKey)
+  Wend
+  
+  ; 2. 更新列宽
+  Define NewMap cwColMap.i()
+  Define NewList colsToMove.s()
+  ForEach PbXls_ColumnWidths()
+    Define cwKey.s = MapKey(PbXls_ColumnWidths())
+    If Left(cwKey, Len(wsKey)) = wsKey
+      Define cwPart.s = Mid(cwKey, wsKeyLen + 1)
+      Define c.i = Val(cwPart)
+      If c >= colIdx
+        cwColMap(cwKey) = c
+      EndIf
+    EndIf
+  Next
+  
+  ; 按列号降序排序
+  For i = maxPossibleCol To colIdx Step -1
+    ForEach cwColMap()
+      If cwColMap() = i
+        AddElement(colsToMove())
+        colsToMove() = MapKey(cwColMap())
+      EndIf
+    Next
+  Next
+  
+  ResetList(colsToMove())
+  While NextElement(colsToMove())
+    Define oldCwKey.s = colsToMove()
+    Define oldCwVal.i = Val(Mid(oldCwKey, wsKeyLen + 1))
+    Define newCwKey.s = wsKey + Str(oldCwVal + count)
+    PbXls_ColumnWidths(newCwKey) = PbXls_ColumnWidths(oldCwKey)
+    DeleteMapElement(PbXls_ColumnWidths(), oldCwKey)
+  Wend
+  
+  ; 3. 更新合并单元格
+  ForEach PbXls_MergedCells()
+    Define mk.s = MapKey(PbXls_MergedCells())
+    If Left(mk, Len(wsKey)) = wsKey
+      Define rangeStr.s = PbXls_MergedCells()
+      Define newRange.s = PbXls_UpdateRangeCols(rangeStr, colIdx, count, #True)
+      If newRange <> ""
+        Define newMk.s = wsKey + UCase(newRange)
+        PbXls_MergedCells(newMk) = UCase(newRange)
+        DeleteMapElement(PbXls_MergedCells(), mk)
+      EndIf
+    EndIf
+  Next
+  
+  ; 4. 更新工作表最大列
+  *ws\maxColumn + count
+  
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_DeleteColumns - 删除指定列
+; 参考openpyxl: worksheet/worksheet.py delete_cols方法
+Procedure.b PbXls_DeleteColumns(*ws.PbXls_Worksheet, colIdx.i, count.i = 1)
+  If colIdx < 1 Or count < 1
+    ProcedureReturn #False
+  EndIf
+  
+  Define wsKey.s = Str(*ws\id) + "_"
+  Define wsKeyLen.i = Len(wsKey)
+  Define maxCol.i = colIdx + count - 1
+  
+  ; 1. 收集需要删除的单元格键值
+  Define NewList deleteCells.s()
+  ForEach PbXls_AllCells()
+    Define ck.s = MapKey(PbXls_AllCells())
+    If Left(ck, Len(wsKey)) = wsKey
+      Define cellPart.s = Mid(ck, wsKeyLen + 1)
+      Define commaPos.i = FindString(cellPart, ",", 1)
+      If commaPos > 0
+        Define c.i = Val(Mid(cellPart, commaPos + 1))
+        If c >= colIdx And c <= maxCol
+          AddElement(deleteCells())
+          deleteCells() = ck
+        EndIf
+      EndIf
+    EndIf
+  Next
+  
+  ; 批量删除
+  ResetList(deleteCells())
+  While NextElement(deleteCells())
+    DeleteMapElement(PbXls_AllCells(), deleteCells())
+  Wend
+  
+  ; 2. 移动右侧的单元格（向前移动）
+  Define NewMap cellColMap.i()
+  Define NewList cellsToMove.s()
+  ForEach PbXls_AllCells()
+    Define ck.s = MapKey(PbXls_AllCells())
+    If Left(ck, Len(wsKey)) = wsKey
+      Define cellPart.s = Mid(ck, wsKeyLen + 1)
+      Define commaPos.i = FindString(cellPart, ",", 1)
+      If commaPos > 0
+        Define c.i = Val(Mid(cellPart, commaPos + 1))
+        If c > maxCol
+          cellColMap(ck) = c
+        EndIf
+      EndIf
+    EndIf
+  Next
+  
+  ; 按列号升序排序
+  Define maxPossibleCol.i = *ws\maxColumn
+  For i = colIdx To maxPossibleCol
+    ForEach cellColMap()
+      If cellColMap() = i
+        AddElement(cellsToMove())
+        cellsToMove() = MapKey(cellColMap())
+      EndIf
+    Next
+  Next
+  
+  ResetList(cellsToMove())
+  While NextElement(cellsToMove())
+    Define oldKey.s = cellsToMove()
+    Define oldCellPart.s = Mid(oldKey, wsKeyLen + 1)
+    Define oldCommaPos.i = FindString(oldCellPart, ",", 1)
+    Define oldRow.i = Val(Left(oldCellPart, oldCommaPos - 1))
+    Define oldCol.i = Val(Mid(oldCellPart, oldCommaPos + 1))
+    
+    Define newCol.i = oldCol - count
+    Define newKey.s = wsKey + Str(oldRow) + "," + Str(newCol)
+    
+    ; 创建新的单元格并复制数据
+    Define *newCell.PbXls_Cell = @PbXls_AllCells(newKey)
+    CopyStructure(@PbXls_AllCells(oldKey), *newCell, PbXls_Cell)
+    *newCell\column = newCol
+    
+    ; 删除旧的单元格
+    DeleteMapElement(PbXls_AllCells(), oldKey)
+  Wend
+  
+  ; 3. 更新列宽
+  ; 收集并删除范围内的列宽
+  Define NewList deleteCw.s()
+  ForEach PbXls_ColumnWidths()
+    Define cwKey.s = MapKey(PbXls_ColumnWidths())
+    If Left(cwKey, Len(wsKey)) = wsKey
+      Define cwPart.s = Mid(cwKey, wsKeyLen + 1)
+      Define c.i = Val(cwPart)
+      If c >= colIdx And c <= maxCol
+        AddElement(deleteCw())
+        deleteCw() = cwKey
+      EndIf
+    EndIf
+  Next
+  ResetList(deleteCw())
+  While NextElement(deleteCw())
+    DeleteMapElement(PbXls_ColumnWidths(), deleteCw())
+  Wend
+  
+  ; 移动右侧的列宽
+  Define NewMap cwColMap.i()
+  Define NewList colsToMove.s()
+  ForEach PbXls_ColumnWidths()
+    Define cwKey.s = MapKey(PbXls_ColumnWidths())
+    If Left(cwKey, Len(wsKey)) = wsKey
+      Define cwPart.s = Mid(cwKey, wsKeyLen + 1)
+      Define c.i = Val(cwPart)
+      If c > maxCol
+        cwColMap(cwKey) = c
+      EndIf
+    EndIf
+  Next
+  
+  For i = colIdx To maxPossibleCol
+    ForEach cwColMap()
+      If cwColMap() = i
+        AddElement(colsToMove())
+        colsToMove() = MapKey(cwColMap())
+      EndIf
+    Next
+  Next
+  
+  ResetList(colsToMove())
+  While NextElement(colsToMove())
+    Define oldCwKey.s = colsToMove()
+    Define oldCwVal.i = Val(Mid(oldCwKey, wsKeyLen + 1))
+    Define newCwKey.s = wsKey + Str(oldCwVal - count)
+    PbXls_ColumnWidths(newCwKey) = PbXls_ColumnWidths(oldCwKey)
+    DeleteMapElement(PbXls_ColumnWidths(), oldCwKey)
+  Wend
+  
+  ; 4. 更新合并单元格
+  ForEach PbXls_MergedCells()
+    Define mk.s = MapKey(PbXls_MergedCells())
+    If Left(mk, Len(wsKey)) = wsKey
+      Define rangeStr.s = PbXls_MergedCells()
+      Define newRange.s = PbXls_UpdateRangeCols(rangeStr, colIdx, count, #False)
+      If newRange <> ""
+        Define newMk.s = wsKey + UCase(newRange)
+        PbXls_MergedCells(newMk) = UCase(newRange)
+        DeleteMapElement(PbXls_MergedCells(), mk)
+      Else
+        DeleteMapElement(PbXls_MergedCells(), mk)
+      EndIf
+    EndIf
+  Next
+  
+  ; 5. 更新工作表最大列
+  *ws\maxColumn - count
+  If *ws\maxColumn < 1
+    *ws\maxColumn = 1
+  EndIf
+  
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_InsertRows - 鍦ㄦ寚瀹氳鍓嶆彃鍏ョ┖琛?
+; 参考openpyxl: worksheet/worksheet.py insert_rows鏂规硶
+Procedure.b PbXls_InsertRows(*ws.PbXls_Worksheet, rowIdx.i, count.i = 1)
+  If rowIdx < 1 Or count < 1
+    ProcedureReturn #False
+  EndIf
+  
+  Define wsKey.s = Str(*ws\id) + "_"
+  Define wsKeyLen.i = Len(wsKey)
+  
+  ; 收集所有需要移动的单元格鎸夎鍙烽檷搴忔帓搴忎互閬垮厤瑕嗙洊)
+  Define NewMap cellRowMap.i()
+  Define NewList cellsToMove.s()
+  ForEach PbXls_AllCells()
+    Define ck.s = MapKey(PbXls_AllCells())
+    If Left(ck, Len(wsKey)) = wsKey
+      Define cellPart.s = Mid(ck, wsKeyLen + 1)
+      Define commaPos.i = FindString(cellPart, ",", 1)
+      If commaPos > 0
+        Define r.i = Val(Left(cellPart, commaPos - 1))
+        If r >= rowIdx
+          cellRowMap(ck) = r
+        EndIf
+      EndIf
+    EndIf
+  Next
+  
+  ; 鎸夎鍙烽檷搴忔帓搴?- 使用纯Basic方式
+  Define maxPossibleRow.i = *ws\maxRow + count + 100
+  For i = maxPossibleRow To rowIdx Step -1
+    ForEach cellRowMap()
+      If cellRowMap() = i
+        AddElement(cellsToMove())
+        cellsToMove() = MapKey(cellRowMap())
+      EndIf
+    Next
+  Next
+  
+  ; 移动单元格
+  ResetList(cellsToMove())
+  While NextElement(cellsToMove())
+    Define oldKey.s = cellsToMove()
+    Define oldCellPart.s = Mid(oldKey, wsKeyLen + 1)
+    Define oldCommaPos.i = FindString(oldCellPart, ",", 1)
+    Define oldRow.i = Val(Left(oldCellPart, oldCommaPos - 1))
+    Define oldCol.i = Val(Mid(oldCellPart, oldCommaPos + 1))
+    
+    Define newRow.i = oldRow + count
+    Define newKey.s = wsKey + Str(newRow) + "," + Str(oldCol)
+    
+    ; 鍒涘缓鏂扮殑鍗曞厓鏍煎苟澶嶅埗鏁版嵁
+    Define *newCell.PbXls_Cell = @PbXls_AllCells(newKey)
+    CopyStructure(@PbXls_AllCells(oldKey), *newCell, PbXls_Cell)
+    *newCell\row = newRow
+    
+    ; 删除旧的单元格
+    DeleteMapElement(PbXls_AllCells(), oldKey)
+  Wend
+  
+  ; 鏇存柊琛岄珮
+  Define NewMap rhRowMap.i()
+  Define NewList rowsToMove.s()
+  ForEach PbXls_RowHeights()
+    Define rhKey.s = MapKey(PbXls_RowHeights())
+    If Left(rhKey, Len(wsKey)) = wsKey
+      Define rhPart.s = Mid(rhKey, wsKeyLen + 1)
+      Define rh.i = Val(rhPart)
+      If rh >= rowIdx
+        rhRowMap(rhKey) = rh
+      EndIf
+    EndIf
+  Next
+  
+  ; 鎸夎鍙烽檷搴忔帓搴?
+  For i = maxPossibleRow To rowIdx Step -1
+    ForEach rhRowMap()
+      If rhRowMap() = i
+        AddElement(rowsToMove())
+        rowsToMove() = MapKey(rhRowMap())
+      EndIf
+    Next
+  Next
+  
+  ResetList(rowsToMove())
+  While NextElement(rowsToMove())
+    Define oldRhKey.s = rowsToMove()
+    Define oldRhVal.i = Val(Mid(oldRhKey, wsKeyLen + 1))
+    Define newRhKey.s = wsKey + Str(oldRhVal + count)
+    PbXls_RowHeights(newRhKey) = PbXls_RowHeights(oldRhKey)
+    DeleteMapElement(PbXls_RowHeights(), oldRhKey)
+  Wend
+  
+  ; 更新合并单元格
+  ForEach PbXls_MergedCells()
+    Define mk.s = MapKey(PbXls_MergedCells())
+    If Left(mk, Len(wsKey)) = wsKey
+      Define rangeStr.s = PbXls_MergedCells()
+      Define newRange.s = PbXls_UpdateRangeRows(rangeStr, rowIdx, count, #True)
+      If newRange <> ""
+        Define newMk.s = wsKey + UCase(newRange)
+        PbXls_MergedCells(newMk) = UCase(newRange)
+        DeleteMapElement(PbXls_MergedCells(), mk)
+      EndIf
+    EndIf
+  Next
+  
+  ; 鏇存柊宸ヤ綔琛ㄦ渶澶ц
+  *ws\maxRow + count
+  
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_DeleteRows - 删除指定行
+; 参考openpyxl: worksheet/worksheet.py delete_rows鏂规硶
+Procedure.b PbXls_DeleteRows(*ws.PbXls_Worksheet, rowIdx.i, count.i = 1)
+  If rowIdx < 1 Or count < 1
+    ProcedureReturn #False
+  EndIf
+  
+  Define wsKey.s = Str(*ws\id) + "_"
+  Define wsKeyLen.i = Len(wsKey)
+  Define maxRow.i = rowIdx + count - 1
+  
+  ; 删除范围内的单元格
+  ForEach PbXls_AllCells()
+    Define ck.s = MapKey(PbXls_AllCells())
+    If Left(ck, Len(wsKey)) = wsKey
+      Define cellPart.s = Mid(ck, wsKeyLen + 1)
+      Define commaPos.i = FindString(cellPart, ",", 1)
+      If commaPos > 0
+        Define r.i = Val(Left(cellPart, commaPos - 1))
+        If r >= rowIdx And r <= maxRow
+          DeleteMapElement(PbXls_AllCells(), ck)
+        ElseIf r > maxRow
+          ; 需要向下移动的单元格
+
+          Define newR.i = r - count
+          Define newKey.s = wsKey + Str(newR) + "," + Mid(cellPart, commaPos + 1)
+          Define *newCell.PbXls_Cell = @PbXls_AllCells(newKey)
+          CopyStructure(@PbXls_AllCells(ck), *newCell, PbXls_Cell)
+          *newCell\row = newR
+          DeleteMapElement(PbXls_AllCells(), ck)
+        EndIf
+      EndIf
+    EndIf
+  Next
+  
+  ; 鍒犻櫎/绉诲姩琛岄珮
+  ForEach PbXls_RowHeights()
+    Define rhKey.s = MapKey(PbXls_RowHeights())
+    If Left(rhKey, Len(wsKey)) = wsKey
+      Define rh.i = Val(Mid(rhKey, wsKeyLen + 1))
+      If rh >= rowIdx And rh <= maxRow
+        DeleteMapElement(PbXls_RowHeights(), rhKey)
+      ElseIf rh > maxRow
+        Define newRhKey.s = wsKey + Str(rh - count)
+        PbXls_RowHeights(newRhKey) = PbXls_RowHeights(rhKey)
+        DeleteMapElement(PbXls_RowHeights(), rhKey)
+      EndIf
+    EndIf
+  Next
+  
+  ; 更新合并单元格
+  ForEach PbXls_MergedCells()
+    Define mk.s = MapKey(PbXls_MergedCells())
+    If Left(mk, Len(wsKey)) = wsKey
+      Define rangeStr.s = PbXls_MergedCells()
+      Define newRange.s = PbXls_UpdateRangeRows(rangeStr, rowIdx, count, #False)
+      If newRange = ""
+        ; 鍒犻櫎瀹屽叏鍦ㄨ鍒犺寖鍥村唴鐨勫悎骞跺崟鍏冩牸
+        DeleteMapElement(PbXls_MergedCells(), mk)
+      Else
+        Define newMk.s = wsKey + UCase(newRange)
+        PbXls_MergedCells(newMk) = UCase(newRange)
+        DeleteMapElement(PbXls_MergedCells(), mk)
+      EndIf
+    EndIf
+  Next
+  
+  ; 鏇存柊宸ヤ綔琛ㄦ渶澶ц
+  If *ws\maxRow > maxRow
+    *ws\maxRow - count
+  Else
+    *ws\maxRow = rowIdx - 1
+  EndIf
+  
   ProcedureReturn #True
 EndProcedure
 
@@ -1570,9 +2424,219 @@ Procedure.i PbXls_WriteWorksheetXML(*ws.PbXls_Worksheet, *wb.PbXls_Workbook)
     Next
   EndIf
   
+  ; 数据验证 - 参考openpyxl: worksheet/datavalidation.py
+  Define dvCount.i = 0
+  ForEach PbXls_DataValidations()
+    dvCount + 1
+  Next
+  If dvCount > 0
+    Define dataValidationsNode.i = PbXls_XMLAddNode(xmlId, worksheetNode, "dataValidations")
+    PbXls_XMLSetAttribute(dataValidationsNode, "count", Str(dvCount))
+    ForEach PbXls_DataValidations()
+      Define dvNode.i = PbXls_XMLAddNode(xmlId, dataValidationsNode, "dataValidation")
+      PbXls_XMLSetAttribute(dvNode, "sqref", PbXls_DataValidations()\sqref)
+      If PbXls_DataValidations()\type <> ""
+        PbXls_XMLSetAttribute(dvNode, "type", PbXls_DataValidations()\type)
+      EndIf
+      If PbXls_DataValidations()\operator <> ""
+        PbXls_XMLSetAttribute(dvNode, "operator", PbXls_DataValidations()\operator)
+      EndIf
+      If PbXls_DataValidations()\allowBlank
+        PbXls_XMLSetAttribute(dvNode, "allowBlank", "1")
+      EndIf
+      If PbXls_DataValidations()\showInputMessage
+        PbXls_XMLSetAttribute(dvNode, "showInputMessage", "1")
+      EndIf
+      If PbXls_DataValidations()\showErrorMessage
+        PbXls_XMLSetAttribute(dvNode, "showErrorMessage", "1")
+      EndIf
+      If PbXls_DataValidations()\showDropDown
+        PbXls_XMLSetAttribute(dvNode, "showDropDown", "1")
+      EndIf
+      If PbXls_DataValidations()\promptTitle <> ""
+        Define promptTitleNode.i = PbXls_XMLAddNode(xmlId, dvNode, "promptTitle")
+        PbXls_XMLSetText(promptTitleNode, PbXls_DataValidations()\promptTitle)
+      EndIf
+      If PbXls_DataValidations()\prompt <> ""
+        Define promptNode.i = PbXls_XMLAddNode(xmlId, dvNode, "prompt")
+        PbXls_XMLSetText(promptNode, PbXls_DataValidations()\prompt)
+      EndIf
+      If PbXls_DataValidations()\errorTitle <> ""
+        Define errorTitleNode.i = PbXls_XMLAddNode(xmlId, dvNode, "errorTitle")
+        PbXls_XMLSetText(errorTitleNode, PbXls_DataValidations()\errorTitle)
+      EndIf
+      If PbXls_DataValidations()\error <> ""
+        Define errorNode.i = PbXls_XMLAddNode(xmlId, dvNode, "error")
+        PbXls_XMLSetText(errorNode, PbXls_DataValidations()\error)
+      EndIf
+      If PbXls_DataValidations()\formula1 <> ""
+        Define f1Node.i = PbXls_XMLAddNode(xmlId, dvNode, "formula1")
+        PbXls_XMLSetText(f1Node, PbXls_DataValidations()\formula1)
+      EndIf
+      If PbXls_DataValidations()\formula2 <> ""
+        Define f2Node.i = PbXls_XMLAddNode(xmlId, dvNode, "formula2")
+        PbXls_XMLSetText(f2Node, PbXls_DataValidations()\formula2)
+      EndIf
+    Next
+  EndIf
+  
+  ; 条件格式 - 参考openpyxl: formatting/formatting.py
+  Define cfCount.i = 0
+  ForEach PbXls_ConditionalFormats()
+    cfCount + 1
+  Next
+  If cfCount > 0
+    ForEach PbXls_ConditionalFormats()
+      Define cfNode.i = PbXls_XMLAddNode(xmlId, worksheetNode, "conditionalFormatting")
+      PbXls_XMLSetAttribute(cfNode, "sqref", PbXls_ConditionalFormats()\sqref)
+      Define cfRuleNode.i = PbXls_XMLAddNode(xmlId, cfNode, "cfRule")
+      PbXls_XMLSetAttribute(cfRuleNode, "type", PbXls_ConditionalFormats()\type)
+      PbXls_XMLSetAttribute(cfRuleNode, "priority", Str(PbXls_ConditionalFormats()\priority))
+      If PbXls_ConditionalFormats()\operator <> ""
+        PbXls_XMLSetAttribute(cfRuleNode, "operator", PbXls_ConditionalFormats()\operator)
+      EndIf
+      If PbXls_ConditionalFormats()\formula1 <> ""
+        Define cfFormulaNode.i = PbXls_XMLAddNode(xmlId, cfRuleNode, "formula")
+        PbXls_XMLSetText(cfFormulaNode, PbXls_ConditionalFormats()\formula1)
+      EndIf
+      ; 处理colorScale类型
+      If PbXls_ConditionalFormats()\type = "colorScale"
+        If PbXls_ConditionalFormats()\minColor <> ""
+          Define colorScaleNode.i = PbXls_XMLAddNode(xmlId, cfRuleNode, "colorScale")
+          Define cfvo1.i = PbXls_XMLAddNode(xmlId, colorScaleNode, "cfvo")
+          PbXls_XMLSetAttribute(cfvo1, "type", PbXls_ConditionalFormats()\minType)
+          PbXls_XMLSetAttribute(cfvo1, "val", "0")
+          Define color1.i = PbXls_XMLAddNode(xmlId, colorScaleNode, "color")
+          PbXls_XMLSetAttribute(color1, "rgb", PbXls_FormatColor(PbXls_ConditionalFormats()\minColor))
+          If PbXls_ConditionalFormats()\midColor <> ""
+            Define cfvo2.i = PbXls_XMLAddNode(xmlId, colorScaleNode, "cfvo")
+            PbXls_XMLSetAttribute(cfvo2, "type", PbXls_ConditionalFormats()\midType)
+            PbXls_XMLSetAttribute(cfvo2, "val", "0")
+            Define color2.i = PbXls_XMLAddNode(xmlId, colorScaleNode, "color")
+            PbXls_XMLSetAttribute(color2, "rgb", PbXls_FormatColor(PbXls_ConditionalFormats()\midColor))
+          EndIf
+          Define cfvo3.i = PbXls_XMLAddNode(xmlId, colorScaleNode, "cfvo")
+          PbXls_XMLSetAttribute(cfvo3, "type", PbXls_ConditionalFormats()\maxType)
+          PbXls_XMLSetAttribute(cfvo3, "val", "0")
+          Define color3.i = PbXls_XMLAddNode(xmlId, colorScaleNode, "color")
+          PbXls_XMLSetAttribute(color3, "rgb", PbXls_FormatColor(PbXls_ConditionalFormats()\maxColor))
+        EndIf
+      EndIf
+    Next
+  EndIf
+  
   If *ws\autoFilter <> ""
     Define autoFilterNode.i = PbXls_XMLAddNode(xmlId, worksheetNode, "autoFilter")
     PbXls_XMLSetAttribute(autoFilterNode, "ref", *ws\autoFilter)
+  EndIf
+  
+  ; 超链接支持- 参考openpyxl: worksheet/hyperlink.py
+  Define hlCount.i = 0
+  ForEach PbXls_AllCells()
+    Define hlKey.s = MapKey(PbXls_AllCells())
+    If Left(hlKey, Len(wsIdStr)) = wsIdStr
+      If PbXls_AllCells()\hyperlink <> ""
+        hlCount + 1
+      EndIf
+    EndIf
+  Next
+  
+  If hlCount > 0
+    Define hyperlinksNode.i = PbXls_XMLAddNode(xmlId, worksheetNode, "hyperlinks")
+    Define hlId.i = 1
+    ForEach PbXls_AllCells()
+      Define hlKey2.s = MapKey(PbXls_AllCells())
+      If Left(hlKey2, Len(wsIdStr)) = wsIdStr
+        If PbXls_AllCells()\hyperlink <> ""
+          Define hlNode.i = PbXls_XMLAddNode(xmlId, hyperlinksNode, "hyperlink")
+          Define hlRef.s = PbXls_CoordinateFromRowCol(PbXls_AllCells()\row, PbXls_AllCells()\column)
+          PbXls_XMLSetAttribute(hlNode, "ref", hlRef)
+          PbXls_XMLSetAttribute(hlNode, "id", "rId" + Str(hlId))
+          PbXls_XMLSetAttribute(hlNode, "display", PbXls_AllCells()\hyperlink)
+          If PbXls_AllCells()\comment <> ""
+            PbXls_XMLSetAttribute(hlNode, "tooltip", PbXls_AllCells()\comment)
+          EndIf
+          hlId + 1
+        EndIf
+      EndIf
+    Next
+  EndIf
+  
+  ; 娉ㄩ噴鏀寔 - 参考openpyxl: comments/comment_sheet.py
+  Define commentCount.i = 0
+  ForEach PbXls_AllCells()
+    Define cmKey.s = MapKey(PbXls_AllCells())
+    If Left(cmKey, Len(wsIdStr)) = wsIdStr
+      If PbXls_AllCells()\comment <> "" And PbXls_AllCells()\hyperlink = ""
+        commentCount + 1
+      EndIf
+    EndIf
+  Next
+  
+  If commentCount > 0
+    Define extLstNode.i = PbXls_XMLAddNode(xmlId, worksheetNode, "extLst")
+    Define extNode.i = PbXls_XMLAddNode(xmlId, extLstNode, "ext")
+    PbXls_XMLSetAttribute(extNode, "uri", "{24D24A12-3E60-46E9-9998-0616A0593193}")
+    PbXls_XMLAddNode(xmlId, extNode, "x14:author")
+  EndIf
+  
+  ; 椤甸潰璁剧疆 - 参考openpyxl: worksheet/page.py
+  Define marginKey2.s = "margins_" + Str(*ws\id)
+  Define ml.f, mr.f, mt.f, mb.f, mh.f, mf.f
+  If FindMapElement(PbXls_ColumnWidths(), marginKey2 + "_left")
+    ml = PbXls_ColumnWidths(marginKey2 + "_left")
+  Else
+    ml = 0.7
+  EndIf
+  If FindMapElement(PbXls_ColumnWidths(), marginKey2 + "_right")
+    mr = PbXls_ColumnWidths(marginKey2 + "_right")
+  Else
+    mr = 0.7
+  EndIf
+  If FindMapElement(PbXls_ColumnWidths(), marginKey2 + "_top")
+    mt = PbXls_ColumnWidths(marginKey2 + "_top")
+  Else
+    mt = 0.75
+  EndIf
+  If FindMapElement(PbXls_ColumnWidths(), marginKey2 + "_bottom")
+    mb = PbXls_ColumnWidths(marginKey2 + "_bottom")
+  Else
+    mb = 0.75
+  EndIf
+  If FindMapElement(PbXls_ColumnWidths(), marginKey2 + "_header")
+    mh = PbXls_ColumnWidths(marginKey2 + "_header")
+  Else
+    mh = 0.3
+  EndIf
+  If FindMapElement(PbXls_ColumnWidths(), marginKey2 + "_footer")
+    mf = PbXls_ColumnWidths(marginKey2 + "_footer")
+  Else
+    mf = 0.3
+  EndIf
+  
+  Define pageMarginsNode.i = PbXls_XMLAddNode(xmlId, worksheetNode, "pageMargins")
+  PbXls_XMLSetAttribute(pageMarginsNode, "left", StrF(ml, 2))
+  PbXls_XMLSetAttribute(pageMarginsNode, "right", StrF(mr, 2))
+  PbXls_XMLSetAttribute(pageMarginsNode, "top", StrF(mt, 2))
+  PbXls_XMLSetAttribute(pageMarginsNode, "bottom", StrF(mb, 2))
+  PbXls_XMLSetAttribute(pageMarginsNode, "header", StrF(mh, 2))
+  PbXls_XMLSetAttribute(pageMarginsNode, "footer", StrF(mf, 2))
+  
+  ; 页眉页脚
+  Define hfKey2.s = "hf_" + Str(*ws\id)
+  Define hasHF.b = #False
+  Define hfHeader.s = "", hfFooter.s = ""
+  If FindMapElement(PbXls_MergedCells(), hfKey2 + "_header")
+    hfHeader = PbXls_MergedCells(hfKey2 + "_header")
+    If hfHeader <> ""
+      hasHF = #True
+    EndIf
+  EndIf
+  If FindMapElement(PbXls_MergedCells(), hfKey2 + "_footer")
+    hfFooter = PbXls_MergedCells(hfKey2 + "_footer")
+    If hfFooter <> ""
+      hasHF = #True
+    EndIf
   EndIf
   
   Define pageSetupNode.i = PbXls_XMLAddNode(xmlId, worksheetNode, "pageSetup")
@@ -1585,6 +2649,49 @@ Procedure.i PbXls_WriteWorksheetXML(*ws.PbXls_Worksheet, *wb.PbXls_Workbook)
     PbXls_XMLSetAttribute(pageSetupNode, "paperSize", Str(*ws\paperSize))
   Else
     PbXls_XMLSetAttribute(pageSetupNode, "paperSize", "9")
+  EndIf
+  
+  ; 页眉页脚节点
+  If hasHF
+    Define hfNode.i = PbXls_XMLAddNode(xmlId, worksheetNode, "headerFooter")
+    If hfHeader <> ""
+      Define oddHeaderNode.i = PbXls_XMLAddNode(xmlId, hfNode, "oddHeader")
+      PbXls_XMLSetText(oddHeaderNode, hfHeader)
+    EndIf
+    If hfFooter <> ""
+      Define oddFooterNode.i = PbXls_XMLAddNode(xmlId, hfNode, "oddFooter")
+      PbXls_XMLSetText(oddFooterNode, hfFooter)
+    EndIf
+  EndIf
+  
+  ; 鎵撳嵃閫夐」 - 参考openpyxl: worksheet/_writer.py write_print
+  Define poKey2.s = "print_" + Str(*ws\id)
+  Define gl.s = "1", hd.s = "0", hc.s = "0", vc.s = "0"
+  If FindMapElement(PbXls_MergedCells(), poKey2 + "_gridLines")
+    gl = PbXls_MergedCells(poKey2 + "_gridLines")
+  EndIf
+  If FindMapElement(PbXls_MergedCells(), poKey2 + "_headings")
+    hd = PbXls_MergedCells(poKey2 + "_headings")
+  EndIf
+  If FindMapElement(PbXls_MergedCells(), poKey2 + "_hCentered")
+    hc = PbXls_MergedCells(poKey2 + "_hCentered")
+  EndIf
+  If FindMapElement(PbXls_MergedCells(), poKey2 + "_vCentered")
+    vc = PbXls_MergedCells(poKey2 + "_vCentered")
+  EndIf
+  
+  Define printOptionsNode.i = PbXls_XMLAddNode(xmlId, worksheetNode, "printOptions")
+  If gl = "1"
+    PbXls_XMLSetAttribute(printOptionsNode, "gridLinesSet", "1")
+  EndIf
+  If hd = "1"
+    PbXls_XMLSetAttribute(printOptionsNode, "headings", "1")
+  EndIf
+  If hc = "1"
+    PbXls_XMLSetAttribute(printOptionsNode, "horizontalCentered", "1")
+  EndIf
+  If vc = "1"
+    PbXls_XMLSetAttribute(printOptionsNode, "verticalCentered", "1")
   EndIf
   
   ProcedureReturn xmlId
@@ -1775,6 +2882,10 @@ Procedure.i PbXls_WriteContentTypesXML(*wb.PbXls_Workbook)
   PbXls_XMLSetAttribute(override5, "PartName", "/docProps/app.xml")
   PbXls_XMLSetAttribute(override5, "ContentType", "application/vnd.openxmlformats-officedocument.extended-properties+xml")
   
+  Define overrideTheme.i = PbXls_XMLAddNode(xmlId, typesNode, "Override")
+  PbXls_XMLSetAttribute(overrideTheme, "PartName", "/xl/theme/theme1.xml")
+  PbXls_XMLSetAttribute(overrideTheme, "ContentType", "application/vnd.openxmlformats-officedocument.theme+xml")
+  
   Define wsIdx.i = 0
   ResetList(PbXls_AllWorksheets())
   While NextElement(PbXls_AllWorksheets())
@@ -1817,6 +2928,498 @@ Procedure.i PbXls_WriteRootRelsXML()
   ProcedureReturn xmlId
 EndProcedure
 
+; PbXls_WriteStylesXML - 鐢熸垚鏍峰紡琛╔ML (styles.xml)
+; 参考openpyxl: styles/stylesheet.py 涓殑 write_stylesheet() 鍑芥暟
+; styles.xml 缁撴瀯: numFmts -> fonts -> fills -> borders -> cellStyleXfs -> cellXfs -> cellStyles -> dxfs -> tableStyles
+Procedure.i PbXls_WriteStylesXML(*wb.PbXls_Workbook)
+  Define xmlId.i = PbXls_XMLCreateDocument()
+  If xmlId = 0
+    ProcedureReturn 0
+  EndIf
+  
+  Define rootNode.i = PbXls_XMLGetRoot(xmlId)
+  Define styleSheetNode.i = PbXls_XMLAddNode(xmlId, rootNode, "styleSheet")
+  PbXls_XMLSetAttribute(styleSheetNode, "xmlns", #PbXls_SHEET_MAIN_NS$)
+  
+  ; 1. numFmts - 自定义数字格式 (从164开始)
+  Define numFmtsNode.i = PbXls_XMLAddNode(xmlId, styleSheetNode, "numFmts")
+  PbXls_XMLSetAttribute(numFmtsNode, "count", "0")
+  
+  ; 2. fonts - 瀛椾綋鍒楄〃
+  Define fontsNode.i = PbXls_XMLAddNode(xmlId, styleSheetNode, "fonts")
+  Define fontCount.i = ListSize(PbXls_Fonts())
+  If fontCount = 0
+    fontCount = 1 ; 纭繚鑷冲皯鏈変竴涓粯璁ゅ瓧浣
+  EndIf
+  PbXls_XMLSetAttribute(fontsNode, "count", Str(fontCount))
+  
+  If ListSize(PbXls_Fonts()) = 0
+    ; 娣诲姞榛樿瀛椾綋
+    Define defaultFontNode.i = PbXls_XMLAddNode(xmlId, fontsNode, "font")
+    Define szNode1.i = PbXls_XMLAddNode(xmlId, defaultFontNode, "sz")
+    PbXls_XMLSetAttribute(szNode1, "val", "11")
+    Define nameNode1.i = PbXls_XMLAddNode(xmlId, defaultFontNode, "name")
+    PbXls_XMLSetAttribute(nameNode1, "val", "Calibri")
+    Define familyNode1.i = PbXls_XMLAddNode(xmlId, defaultFontNode, "family")
+    PbXls_XMLSetAttribute(familyNode1, "val", "2")
+    Define schemeNode1.i = PbXls_XMLAddNode(xmlId, defaultFontNode, "scheme")
+    PbXls_XMLSetAttribute(schemeNode1, "val", "minor")
+    Define colorNode1.i = PbXls_XMLAddNode(xmlId, defaultFontNode, "color")
+    PbXls_XMLSetAttribute(colorNode1, "theme", "1")
+  Else
+    Define fontIdx.i = 0
+    ForEach PbXls_Fonts()
+      Define fontNode.i = PbXls_XMLAddNode(xmlId, fontsNode, "font")
+      
+      ; 瀛椾綋鍚嶇О
+      If PbXls_Fonts()\name <> ""
+        Define fNameNode.i = PbXls_XMLAddNode(xmlId, fontNode, "name")
+        PbXls_XMLSetAttribute(fNameNode, "val", PbXls_Fonts()\name)
+      EndIf
+      
+      ; 瀛椾綋澶у皬
+      If PbXls_Fonts()\size > 0
+        Define fSzNode.i = PbXls_XMLAddNode(xmlId, fontNode, "sz")
+        PbXls_XMLSetAttribute(fSzNode, "val", StrF(PbXls_Fonts()\size, 1))
+      EndIf
+      
+      ; 瀛椾綋棰滆壊
+      If PbXls_Fonts()\color <> ""
+        Define fColorNode.i = PbXls_XMLAddNode(xmlId, fontNode, "color")
+        PbXls_XMLSetAttribute(fColorNode, "rgb", "FF" + PbXls_ParseColor(PbXls_Fonts()\color))
+      EndIf
+      
+      ; 绮椾綋
+      If PbXls_Fonts()\bold
+        Define fBoldNode.i = PbXls_XMLAddNode(xmlId, fontNode, "b")
+        PbXls_XMLSetAttribute(fBoldNode, "val", "1")
+      EndIf
+      
+      ; 鏂滀綋
+      If PbXls_Fonts()\italic
+        Define fItalicNode.i = PbXls_XMLAddNode(xmlId, fontNode, "i")
+        PbXls_XMLSetAttribute(fItalicNode, "val", "1")
+      EndIf
+      
+      ; 下划线
+      If PbXls_Fonts()\underline
+        Define fUnderlineNode.i = PbXls_XMLAddNode(xmlId, fontNode, "u")
+        PbXls_XMLSetAttribute(fUnderlineNode, "val", "single")
+      EndIf
+      
+      ; 删除线
+      If PbXls_Fonts()\strike
+        Define fStrikeNode.i = PbXls_XMLAddNode(xmlId, fontNode, "strike")
+        PbXls_XMLSetAttribute(fStrikeNode, "val", "1")
+      EndIf
+      
+      ; 字体系列
+      If PbXls_Fonts()\family > 0
+        Define fFamilyNode.i = PbXls_XMLAddNode(xmlId, fontNode, "family")
+        PbXls_XMLSetAttribute(fFamilyNode, "val", Str(PbXls_Fonts()\family))
+      EndIf
+      
+      ; 字体方案
+      If PbXls_Fonts()\scheme <> ""
+        Define fSchemeNode.i = PbXls_XMLAddNode(xmlId, fontNode, "scheme")
+        PbXls_XMLSetAttribute(fSchemeNode, "val", PbXls_Fonts()\scheme)
+      EndIf
+      
+      fontIdx + 1
+    Next
+  EndIf
+  
+  ; 3. fills - 填充列表 (必须包含至少两个默认填充: none 和 gray125)
+  Define fillsNode.i = PbXls_XMLAddNode(xmlId, styleSheetNode, "fills")
+  ; Excel要求: 前两个填充是保留的(none和gray125)，用户填充从索引2开始
+  Define fillCount.i = ListSize(PbXls_Fills()) + 2
+  PbXls_XMLSetAttribute(fillsNode, "count", Str(fillCount))
+  
+  ; 添加默认填充1: patternType="none"
+  Define defaultFill1Node.i = PbXls_XMLAddNode(xmlId, fillsNode, "fill")
+  Define pf1Node.i = PbXls_XMLAddNode(xmlId, defaultFill1Node, "patternFill")
+  PbXls_XMLSetAttribute(pf1Node, "patternType", "none")
+  
+  ; 添加默认填充2: patternType="gray125"
+  Define defaultFill2Node.i = PbXls_XMLAddNode(xmlId, fillsNode, "fill")
+  Define pf2Node.i = PbXls_XMLAddNode(xmlId, defaultFill2Node, "patternFill")
+  PbXls_XMLSetAttribute(pf2Node, "patternType", "gray125")
+  
+  ; 添加用户自定义填充
+  If ListSize(PbXls_Fills()) > 0
+    ForEach PbXls_Fills()
+      Define fillNode.i = PbXls_XMLAddNode(xmlId, fillsNode, "fill")
+      Define pfNode.i = PbXls_XMLAddNode(xmlId, fillNode, "patternFill")
+      
+      If PbXls_Fills()\patternType <> "" And PbXls_Fills()\patternType <> "none" And PbXls_Fills()\patternType <> "gray125"
+        PbXls_XMLSetAttribute(pfNode, "patternType", PbXls_Fills()\patternType)
+        
+        If PbXls_Fills()\fgColor <> ""
+          Define fgNode.i = PbXls_XMLAddNode(xmlId, pfNode, "fgColor")
+          PbXls_XMLSetAttribute(fgNode, "rgb", PbXls_FormatColor(PbXls_Fills()\fgColor))
+        EndIf
+        
+        If PbXls_Fills()\bgColor <> ""
+          Define bgNode.i = PbXls_XMLAddNode(xmlId, pfNode, "bgColor")
+          PbXls_XMLSetAttribute(bgNode, "rgb", PbXls_FormatColor(PbXls_Fills()\bgColor))
+        EndIf
+      EndIf
+    Next
+  EndIf
+  
+  ; 4. borders - 边框列表
+  Define bordersNode.i = PbXls_XMLAddNode(xmlId, styleSheetNode, "borders")
+  Define borderCount.i = ListSize(PbXls_Borders())
+  If borderCount = 0
+    borderCount = 1 ; 确保至少有一个默认边框
+  EndIf
+  PbXls_XMLSetAttribute(bordersNode, "count", Str(borderCount))
+  
+  If ListSize(PbXls_Borders()) = 0
+    ; 添加默认边框 (所有边都是none)
+    Define defaultBorderNode.i = PbXls_XMLAddNode(xmlId, bordersNode, "border")
+    Define leftNode1.i = PbXls_XMLAddNode(xmlId, defaultBorderNode, "left")
+    Define rightNode1.i = PbXls_XMLAddNode(xmlId, defaultBorderNode, "right")
+    Define topNode1.i = PbXls_XMLAddNode(xmlId, defaultBorderNode, "top")
+    Define bottomNode1.i = PbXls_XMLAddNode(xmlId, defaultBorderNode, "bottom")
+    Define diagNode1.i = PbXls_XMLAddNode(xmlId, defaultBorderNode, "diagonal")
+  Else
+    Define borderIdx.i = 0
+    ForEach PbXls_Borders()
+      Define borderNode.i = PbXls_XMLAddNode(xmlId, bordersNode, "border")
+      
+      ; 左边框
+      Define bLeftNode.i = PbXls_XMLAddNode(xmlId, borderNode, "left")
+      If PbXls_Borders()\left\style <> "" And PbXls_Borders()\left\style <> "none"
+        PbXls_XMLSetAttribute(bLeftNode, "style", PbXls_Borders()\left\style)
+        Define bLeftColor.i = PbXls_XMLAddNode(xmlId, bLeftNode, "color")
+        PbXls_XMLSetAttribute(bLeftColor, "rgb", PbXls_FormatColor(PbXls_Borders()\left\color))
+      EndIf
+      
+      ; 右边框
+      Define bRightNode.i = PbXls_XMLAddNode(xmlId, borderNode, "right")
+      If PbXls_Borders()\right\style <> "" And PbXls_Borders()\right\style <> "none"
+        PbXls_XMLSetAttribute(bRightNode, "style", PbXls_Borders()\right\style)
+        Define bRightColor.i = PbXls_XMLAddNode(xmlId, bRightNode, "color")
+        PbXls_XMLSetAttribute(bRightColor, "rgb", PbXls_FormatColor(PbXls_Borders()\right\color))
+      EndIf
+      
+      ; 上边框
+      Define bTopNode.i = PbXls_XMLAddNode(xmlId, borderNode, "top")
+      If PbXls_Borders()\top\style <> "" And PbXls_Borders()\top\style <> "none"
+        PbXls_XMLSetAttribute(bTopNode, "style", PbXls_Borders()\top\style)
+        Define bTopColor.i = PbXls_XMLAddNode(xmlId, bTopNode, "color")
+        PbXls_XMLSetAttribute(bTopColor, "rgb", PbXls_FormatColor(PbXls_Borders()\top\color))
+      EndIf
+      
+      ; 下边框
+      Define bBottomNode.i = PbXls_XMLAddNode(xmlId, borderNode, "bottom")
+      If PbXls_Borders()\bottom\style <> "" And PbXls_Borders()\bottom\style <> "none"
+        PbXls_XMLSetAttribute(bBottomNode, "style", PbXls_Borders()\bottom\style)
+        Define bBottomColor.i = PbXls_XMLAddNode(xmlId, bBottomNode, "color")
+        PbXls_XMLSetAttribute(bBottomColor, "rgb", PbXls_FormatColor(PbXls_Borders()\bottom\color))
+      EndIf
+      
+      ; 瀵硅绾胯竟妗
+      Define bDiagNode.i = PbXls_XMLAddNode(xmlId, borderNode, "diagonal")
+      If PbXls_Borders()\diagonal\style <> "" And PbXls_Borders()\diagonal\style <> "none"
+        PbXls_XMLSetAttribute(bDiagNode, "style", PbXls_Borders()\diagonal\style)
+        Define bDiagColor.i = PbXls_XMLAddNode(xmlId, bDiagNode, "color")
+        PbXls_XMLSetAttribute(bDiagColor, "rgb", PbXls_FormatColor(PbXls_Borders()\diagonal\color))
+        If PbXls_Borders()\diagonalUp
+          PbXls_XMLSetAttribute(borderNode, "diagonalUp", "1")
+        EndIf
+        If PbXls_Borders()\diagonalDown
+          PbXls_XMLSetAttribute(borderNode, "diagonalDown", "1")
+        EndIf
+      EndIf
+      
+      borderIdx + 1
+    Next
+  EndIf
+  
+  ; 5. cellStyleXfs - 榛樿鏍峰紡鏍煎紡 (蹇呴』鑷冲皯鏈変竴涓
+
+  Define cellStyleXfsNode.i = PbXls_XMLAddNode(xmlId, styleSheetNode, "cellStyleXfs")
+  PbXls_XMLSetAttribute(cellStyleXfsNode, "count", "1")
+  Define defaultXfNode.i = PbXls_XMLAddNode(xmlId, cellStyleXfsNode, "xf")
+  PbXls_XMLSetAttribute(defaultXfNode, "numFmtId", "0")
+  PbXls_XMLSetAttribute(defaultXfNode, "fontId", "0")
+  PbXls_XMLSetAttribute(defaultXfNode, "fillId", "0")
+  PbXls_XMLSetAttribute(defaultXfNode, "borderId", "0")
+  
+  ; 6. cellXfs - 单元格样式应用
+  Define cellXfsNode.i = PbXls_XMLAddNode(xmlId, styleSheetNode, "cellXfs")
+  Define cellXfCount.i = ListSize(PbXls_CellStyles())
+  If cellXfCount = 0
+    cellXfCount = 1 ; 纭繚鑷冲皯鏈変竴涓粯璁ゆ牱寮
+  EndIf
+  PbXls_XMLSetAttribute(cellXfsNode, "count", Str(cellXfCount))
+  
+  If ListSize(PbXls_CellStyles()) = 0
+    ; 娣诲姞榛樿鍗曞厓鏍兼牱寮
+    Define defaultCellXf.i = PbXls_XMLAddNode(xmlId, cellXfsNode, "xf")
+    PbXls_XMLSetAttribute(defaultCellXf, "numFmtId", "0")
+    PbXls_XMLSetAttribute(defaultCellXf, "fontId", "0")
+    PbXls_XMLSetAttribute(defaultCellXf, "fillId", "0")
+    PbXls_XMLSetAttribute(defaultCellXf, "borderId", "0")
+    PbXls_XMLSetAttribute(defaultCellXf, "xfId", "0")
+  Else
+    Define cellStyleIdx.i = 0
+    ForEach PbXls_CellStyles()
+      Define cellXfNode.i = PbXls_XMLAddNode(xmlId, cellXfsNode, "xf")
+      PbXls_XMLSetAttribute(cellXfNode, "numFmtId", Str(PbXls_CellStyles()\numFmtId))
+      PbXls_XMLSetAttribute(cellXfNode, "fontId", Str(PbXls_CellStyles()\fontId))
+      PbXls_XMLSetAttribute(cellXfNode, "fillId", Str(PbXls_CellStyles()\fillId))
+      PbXls_XMLSetAttribute(cellXfNode, "borderId", Str(PbXls_CellStyles()\borderId))
+      PbXls_XMLSetAttribute(cellXfNode, "xfId", "0")
+      
+      ; 检查是否需要 applyAlignment
+      If PbXls_CellStyles()\alignment\horizontal <> "general" Or
+         PbXls_CellStyles()\alignment\vertical <> "bottom" Or
+         PbXls_CellStyles()\alignment\wrapText Or
+         PbXls_CellStyles()\alignment\shrinkToFit Or
+         PbXls_CellStyles()\alignment\indent > 0 Or
+         PbXls_CellStyles()\alignment\textRotation > 0
+        PbXls_XMLSetAttribute(cellXfNode, "applyAlignment", "1")
+        
+        Define alignNode.i = PbXls_XMLAddNode(xmlId, cellXfNode, "alignment")
+        If PbXls_CellStyles()\alignment\horizontal <> "general"
+          PbXls_XMLSetAttribute(alignNode, "horizontal", PbXls_CellStyles()\alignment\horizontal)
+        EndIf
+        If PbXls_CellStyles()\alignment\vertical <> "bottom"
+          PbXls_XMLSetAttribute(alignNode, "vertical", PbXls_CellStyles()\alignment\vertical)
+        EndIf
+        If PbXls_CellStyles()\alignment\wrapText
+          PbXls_XMLSetAttribute(alignNode, "wrapText", "1")
+        EndIf
+        If PbXls_CellStyles()\alignment\shrinkToFit
+          PbXls_XMLSetAttribute(alignNode, "shrinkToFit", "1")
+        EndIf
+        If PbXls_CellStyles()\alignment\indent > 0
+          PbXls_XMLSetAttribute(alignNode, "indent", Str(PbXls_CellStyles()\alignment\indent))
+        EndIf
+        If PbXls_CellStyles()\alignment\textRotation > 0
+          PbXls_XMLSetAttribute(alignNode, "textRotation", Str(PbXls_CellStyles()\alignment\textRotation))
+        EndIf
+      EndIf
+      
+      ; 检查是否需要 applyProtection
+      If PbXls_CellStyles()\locked Or PbXls_CellStyles()\hidden
+        PbXls_XMLSetAttribute(cellXfNode, "applyProtection", "1")
+        
+        Define protNode.i = PbXls_XMLAddNode(xmlId, cellXfNode, "protection")
+        If PbXls_CellStyles()\locked
+          PbXls_XMLSetAttribute(protNode, "locked", "1")
+        EndIf
+        If PbXls_CellStyles()\hidden
+          PbXls_XMLSetAttribute(protNode, "hidden", "1")
+        EndIf
+      EndIf
+      
+      cellStyleIdx + 1
+    Next
+  EndIf
+  
+  ; 7. cellStyles - 命名样式 (至少需要 Normal)
+  Define cellStylesNode.i = PbXls_XMLAddNode(xmlId, styleSheetNode, "cellStyles")
+  PbXls_XMLSetAttribute(cellStylesNode, "count", "1")
+  Define normalStyleNode.i = PbXls_XMLAddNode(xmlId, cellStylesNode, "cellStyle")
+  PbXls_XMLSetAttribute(normalStyleNode, "name", "Normal")
+  PbXls_XMLSetAttribute(normalStyleNode, "xfId", "0")
+  PbXls_XMLSetAttribute(normalStyleNode, "builtinId", "0")
+  
+  ; 8. dxfs - 差异格式 (条件格式用，暂时为空)
+  Define dxfsNode.i = PbXls_XMLAddNode(xmlId, styleSheetNode, "dxfs")
+  PbXls_XMLSetAttribute(dxfsNode, "count", "0")
+  
+  ; 9. tableStyles - 表格样式 (暂时为空)
+  Define tableStylesNode.i = PbXls_XMLAddNode(xmlId, styleSheetNode, "tableStyles")
+  PbXls_XMLSetAttribute(tableStylesNode, "count", "0")
+  PbXls_XMLSetAttribute(tableStylesNode, "defaultPivotStyle", "PivotStyleLight16")
+  PbXls_XMLSetAttribute(tableStylesNode, "defaultTableStyle", "TableStyleMedium9")
+  
+  ProcedureReturn xmlId
+EndProcedure
+
+; PbXls_GetThemeXML - 获取固定主题XML字符串
+; 参考openpyxl: writer/theme.py — 使用固定的theme字符串
+; theme.xml 定义了Office主题的颜色方案、字体方案和格式方案
+Procedure.s PbXls_GetThemeXML()
+  ProcedureReturn ~"<?xml version=\"1.0\"?>" +
+                  ~"<a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" name=\"Office\">" +
+                  ~"<a:themeElements>" +
+                  ~"<a:clrScheme name=\"Office\">" +
+                  ~"<a:dk1><a:sysClr val=\"windowText\" lastClr=\"000000\"/></a:dk1>" +
+                  ~"<a:lt1><a:sysClr val=\"window\" lastClr=\"FFFFFF\"/></a:lt1>" +
+                  ~"<a:dk2><a:srgbClr val=\"1F497D\"/></a:dk2>" +
+                  ~"<a:lt2><a:srgbClr val=\"EEECE1\"/></a:lt2>" +
+                  ~"<a:accent1><a:srgbClr val=\"4F81BD\"/></a:accent1>" +
+                  ~"<a:accent2><a:srgbClr val=\"C0504D\"/></a:accent2>" +
+                  ~"<a:accent3><a:srgbClr val=\"9BBB59\"/></a:accent3>" +
+                  ~"<a:accent4><a:srgbClr val=\"8064A2\"/></a:accent4>" +
+                  ~"<a:accent5><a:srgbClr val=\"4BACC6\"/></a:accent5>" +
+                  ~"<a:accent6><a:srgbClr val=\"F79646\"/></a:accent6>" +
+                  ~"<a:hlink><a:srgbClr val=\"0000FF\"/></a:hlink>" +
+                  ~"<a:folHlink><a:srgbClr val=\"800080\"/></a:folHlink>" +
+                  ~"</a:clrScheme>" +
+                  ~"<a:fontScheme name=\"Office\">" +
+                  ~"<a:majorFont>" +
+                  ~"<a:latin typeface=\"Cambria\"/>" +
+                  ~"<a:ea typeface=\"\"/>" +
+                  ~"<a:cs typeface=\"\"/>" +
+                  ~"<a:font script=\"Jpan\" typeface=\"&#xFF2D;&#xFF33; &#xFF30;&#x30B4;&#x30B7;&#x30C3;&#x30AF;\"/>" +
+                  ~"<a:font script=\"Hang\" typeface=\"&#xB9D1;&#xC740; &#xACE0;&#xB515;\"/>" +
+                  ~"<a:font script=\"Hans\" typeface=\"&#x5B8B;&#x4F53;\"/>" +
+                  ~"<a:font script=\"Hant\" typeface=\"&#x65B0;&#x7D30;&#x660E;&#x9AD4;\"/>" +
+                  ~"<a:font script=\"Arab\" typeface=\"Times New Roman\"/>" +
+                  ~"<a:font script=\"Hebr\" typeface=\"Times New Roman\"/>" +
+                  ~"<a:font script=\"Thai\" typeface=\"Tahoma\"/>" +
+                  ~"<a:font script=\"Ethi\" typeface=\"Nyala\"/>" +
+                  ~"<a:font script=\"Beng\" typeface=\"Vrinda\"/>" +
+                  ~"<a:font script=\"Gujr\" typeface=\"Shruti\"/>" +
+                  ~"<a:font script=\"Khmr\" typeface=\"MoolBoran\"/>" +
+                  ~"<a:font script=\"Knda\" typeface=\"Tunga\"/>" +
+                  ~"<a:font script=\"Guru\" typeface=\"Raavi\"/>" +
+                  ~"<a:font script=\"Cans\" typeface=\"Euphemia\"/>" +
+                  ~"<a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/>" +
+                  ~"<a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/>" +
+                  ~"<a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/>" +
+                  ~"<a:font script=\"Thaa\" typeface=\"MV Boli\"/>" +
+                  ~"<a:font script=\"Deva\" typeface=\"Mangal\"/>" +
+                  ~"<a:font script=\"Telu\" typeface=\"Gautami\"/>" +
+                  ~"<a:font script=\"Taml\" typeface=\"Latha\"/>" +
+                  ~"<a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/>" +
+                  ~"<a:font script=\"Orya\" typeface=\"Kalinga\"/>" +
+                  ~"<a:font script=\"Mlym\" typeface=\"Kartika\"/>" +
+                  ~"<a:font script=\"Laoo\" typeface=\"DokChampa\"/>" +
+                  ~"<a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/>" +
+                  ~"<a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/>" +
+                  ~"<a:font script=\"Viet\" typeface=\"Times New Roman\"/>" +
+                  ~"<a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/>" +
+                  ~"</a:majorFont>" +
+                  ~"<a:minorFont>" +
+                  ~"<a:latin typeface=\"Calibri\"/>" +
+                  ~"<a:ea typeface=\"\"/>" +
+                  ~"<a:cs typeface=\"\"/>" +
+                  ~"<a:font script=\"Jpan\" typeface=\"&#xFF2D;&#xFF33; &#xFF30;&#x30B4;&#x30B7;&#x30C3;&#x30AF;\"/>" +
+                  ~"<a:font script=\"Hang\" typeface=\"&#xB9D1;&#xC740; &#xACE0;&#xB515;\"/>" +
+                  ~"<a:font script=\"Hans\" typeface=\"&#x5B8B;&#x4F53;\"/>" +
+                  ~"<a:font script=\"Hant\" typeface=\"&#x65B0;&#x7D30;&#x660E;&#x9AD4;\"/>" +
+                  ~"<a:font script=\"Arab\" typeface=\"Arial\"/>" +
+                  ~"<a:font script=\"Hebr\" typeface=\"Arial\"/>" +
+                  ~"<a:font script=\"Thai\" typeface=\"Tahoma\"/>" +
+                  ~"<a:font script=\"Ethi\" typeface=\"Nyala\"/>" +
+                  ~"<a:font script=\"Beng\" typeface=\"Vrinda\"/>" +
+                  ~"<a:font script=\"Gujr\" typeface=\"Shruti\"/>" +
+                  ~"<a:font script=\"Khmr\" typeface=\"DaunPenh\"/>" +
+                  ~"<a:font script=\"Knda\" typeface=\"Tunga\"/>" +
+                  ~"<a:font script=\"Guru\" typeface=\"Raavi\"/>" +
+                  ~"<a:font script=\"Cans\" typeface=\"Euphemia\"/>" +
+                  ~"<a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/>" +
+                  ~"<a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/>" +
+                  ~"<a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/>" +
+                  ~"<a:font script=\"Thaa\" typeface=\"MV Boli\"/>" +
+                  ~"<a:font script=\"Deva\" typeface=\"Mangal\"/>" +
+                  ~"<a:font script=\"Telu\" typeface=\"Gautami\"/>" +
+                  ~"<a:font script=\"Taml\" typeface=\"Latha\"/>" +
+                  ~"<a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/>" +
+                  ~"<a:font script=\"Orya\" typeface=\"Kalinga\"/>" +
+                  ~"<a:font script=\"Mlym\" typeface=\"Kartika\"/>" +
+                  ~"<a:font script=\"Laoo\" typeface=\"DokChampa\"/>" +
+                  ~"<a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/>" +
+                  ~"<a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/>" +
+                  ~"<a:font script=\"Viet\" typeface=\"Arial\"/>" +
+                  ~"<a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/>" +
+                  ~"</a:minorFont>" +
+                  ~"</a:fontScheme>" +
+                  ~"<a:fmtScheme name=\"Office\">" +
+                  ~"<a:fillStyleLst>" +
+                  ~"<a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill>" +
+                  ~"<a:gradFill rotWithShape=\"1\">" +
+                  ~"<a:gsLst>" +
+                  ~"<a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:tint val=\"50000\"/><a:satMod val=\"300000\"/></a:schemeClr></a:gs>" +
+                  ~"<a:gs pos=\"35000\"><a:schemeClr val=\"phClr\"><a:tint val=\"37000\"/><a:satMod val=\"300000\"/></a:schemeClr></a:gs>" +
+                  ~"<a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:tint val=\"15000\"/><a:satMod val=\"350000\"/></a:schemeClr></a:gs>" +
+                  ~"</a:gsLst>" +
+                  ~"<a:lin ang=\"16200000\" scaled=\"1\"/>" +
+                  ~"</a:gradFill>" +
+                  ~"<a:gradFill rotWithShape=\"1\">" +
+                  ~"<a:gsLst>" +
+                  ~"<a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:shade val=\"51000\"/><a:satMod val=\"130000\"/></a:schemeClr></a:gs>" +
+                  ~"<a:gs pos=\"80000\"><a:schemeClr val=\"phClr\"><a:shade val=\"93000\"/><a:satMod val=\"130000\"/></a:schemeClr></a:gs>" +
+                  ~"<a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:shade val=\"94000\"/><a:satMod val=\"135000\"/></a:schemeClr></a:gs>" +
+                  ~"</a:gsLst>" +
+                  ~"<a:lin ang=\"16200000\" scaled=\"0\"/>" +
+                  ~"</a:gradFill>" +
+                  ~"</a:fillStyleLst>" +
+                  ~"<a:lnStyleLst>" +
+                  ~"<a:ln w=\"9525\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\">" +
+                  ~"<a:solidFill><a:schemeClr val=\"phClr\"><a:shade val=\"95000\"/><a:satMod val=\"105000\"/></a:schemeClr></a:solidFill>" +
+                  ~"<a:prstDash val=\"solid\"/>" +
+                  ~"</a:ln>" +
+                  ~"<a:ln w=\"25400\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\">" +
+                  ~"<a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill>" +
+                  ~"<a:prstDash val=\"solid\"/>" +
+                  ~"</a:ln>" +
+                  ~"<a:ln w=\"38100\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\">" +
+                  ~"<a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill>" +
+                  ~"<a:prstDash val=\"solid\"/>" +
+                  ~"</a:ln>" +
+                  ~"</a:lnStyleLst>" +
+                  ~"<a:effectStyleLst>" +
+                  ~"<a:effectStyle>" +
+                  ~"<a:effectLst>" +
+                  ~"<a:outerShdw blurRad=\"40000\" dist=\"20000\" dir=\"5400000\" rotWithShape=\"0\">" +
+                  ~"<a:srgbClr val=\"000000\"><a:alpha val=\"38000\"/></a:srgbClr>" +
+                  ~"</a:outerShdw>" +
+                  ~"</a:effectLst>" +
+                  ~"</a:effectStyle>" +
+                  ~"<a:effectStyle>" +
+                  ~"<a:effectLst>" +
+                  ~"<a:outerShdw blurRad=\"40000\" dist=\"23000\" dir=\"5400000\" rotWithShape=\"0\">" +
+                  ~"<a:srgbClr val=\"000000\"><a:alpha val=\"35000\"/></a:srgbClr>" +
+                  ~"</a:outerShdw>" +
+                  ~"</a:effectLst>" +
+                  ~"</a:effectStyle>" +
+                  ~"<a:effectStyle>" +
+                  ~"<a:effectLst>" +
+                  ~"<a:outerShdw blurRad=\"40000\" dist=\"23000\" dir=\"5400000\" rotWithShape=\"0\">" +
+                  ~"<a:srgbClr val=\"000000\"><a:alpha val=\"35000\"/></a:srgbClr>" +
+                  ~"</a:outerShdw>" +
+                  ~"</a:effectLst>" +
+                  ~"<a:scene3d>" +
+                  ~"<a:camera prst=\"orthographicFront\"><a:rot lat=\"0\" lon=\"0\" rev=\"0\"/></a:camera>" +
+                  ~"<a:lightRig rig=\"threePt\" dir=\"t\"><a:rot lat=\"0\" lon=\"0\" rev=\"1200000\"/></a:lightRig>" +
+                  ~"</a:scene3d>" +
+                  ~"<a:sp3d><a:bevelT w=\"63500\" h=\"25400\"/></a:sp3d>" +
+                  ~"</a:effectStyle>" +
+                  ~"</a:effectStyleLst>" +
+                  ~"<a:bgFillStyleLst>" +
+                  ~"<a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill>" +
+                  ~"<a:gradFill rotWithShape=\"1\">" +
+                  ~"<a:gsLst>" +
+                  ~"<a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:tint val=\"40000\"/><a:satMod val=\"350000\"/></a:schemeClr></a:gs>" +
+                  ~"<a:gs pos=\"40000\"><a:schemeClr val=\"phClr\"><a:tint val=\"45000\"/><a:shade val=\"99000\"/><a:satMod val=\"350000\"/></a:schemeClr></a:gs>" +
+                  ~"<a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:shade val=\"20000\"/><a:satMod val=\"255000\"/></a:schemeClr></a:gs>" +
+                  ~"</a:gsLst>" +
+                  ~"<a:path path=\"circle\"><a:fillToRect l=\"50000\" t=\"-80000\" r=\"50000\" b=\"180000\"/></a:path>" +
+                  ~"</a:gradFill>" +
+                  ~"<a:gradFill rotWithShape=\"1\">" +
+                  ~"<a:gsLst>" +
+                  ~"<a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:tint val=\"80000\"/><a:satMod val=\"300000\"/></a:schemeClr></a:gs>" +
+                  ~"<a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:shade val=\"30000\"/><a:satMod val=\"200000\"/></a:schemeClr></a:gs>" +
+                  ~"</a:gsLst>" +
+                  ~"<a:path path=\"circle\"><a:fillToRect l=\"50000\" t=\"50000\" r=\"50000\" b=\"50000\"/></a:path>" +
+                  ~"</a:gradFill>" +
+                  ~"</a:bgFillStyleLst>" +
+                  ~"</a:fmtScheme>" +
+                  ~"</a:themeElements>" +
+                  ~"<a:objectDefaults/>" +
+                  ~"<a:extraClrSchemeLst/>" +
+                  ~"</a:theme>"
+EndProcedure
+
 Procedure.i PbXls_WriteWorkbookRelsXML(*wb.PbXls_Workbook)
   Define xmlId.i = PbXls_XMLCreateDocument()
   If xmlId = 0
@@ -1849,6 +3452,11 @@ Procedure.i PbXls_WriteWorkbookRelsXML(*wb.PbXls_Workbook)
   PbXls_XMLSetAttribute(relStyles, "Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles")
   PbXls_XMLSetAttribute(relStyles, "Target", "styles.xml")
   
+  Define relTheme.i = PbXls_XMLAddNode(xmlId, relsNode, "Relationship")
+  PbXls_XMLSetAttribute(relTheme, "Id", "rId" + Str(wsIdx2 + 3))
+  PbXls_XMLSetAttribute(relTheme, "Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme")
+  PbXls_XMLSetAttribute(relTheme, "Target", "theme/theme1.xml")
+  
   ProcedureReturn xmlId
 EndProcedure
 
@@ -1863,7 +3471,8 @@ Procedure.b PbXls_AddXMLToZIP(packId.i, xmlId.i, archivePath.s)
     ProcedureReturn #False
   EndIf
   
-  ; UTF8编码每个字符最多需要4个字节，分配足够大的缓冲区
+  ; UTF8缂栫爜姣忎釜瀛楃鏈€澶氶渶瑕?涓瓧鑺傦紝鍒嗛厤瓒冲澶х殑缂撳啿鍖
+
   Define bufferSize.i = Len(xmlStr) * 4 + 10
   Define *buffer = AllocateMemory(bufferSize)
   If *buffer = 0
@@ -1883,7 +3492,7 @@ Procedure.b PbXls_AddXMLToZIP(packId.i, xmlId.i, archivePath.s)
   ProcedureReturn result
 EndProcedure
 
-; PbXls_SaveWorkbookToFile - 保存工作簿到文件
+; PbXls_SaveWorkbookToFile - 淇濆瓨宸ヤ綔绨垮埌文件
 Procedure.b PbXls_SaveWorkbookToFile(wbId.i, filename.s)
   Define *wb.PbXls_Workbook = PbXls_GetWorkbookPtr(wbId)
   If *wb = 0
@@ -1925,7 +3534,27 @@ Procedure.b PbXls_SaveWorkbookToFile(wbId.i, filename.s)
   Define sharedStringsXml.i = PbXls_WriteSharedStrings(*wb)
   PbXls_AddXMLToZIP(packId, sharedStringsXml, #PbXls_ARCSharedStrings$)
   
-  ; 8. xl/styles.xml (need to implement)
+  ; 8. xl/styles.xml
+  Define stylesXml.i = PbXls_WriteStylesXML(*wb)
+  If stylesXml
+    PbXls_AddXMLToZIP(packId, stylesXml, #PbXls_ARCStyles$)
+  EndIf
+  
+  ; 8.5. xl/theme/theme1.xml
+  Define themeXmlStr.s = PbXls_GetThemeXML()
+  If themeXmlStr <> ""
+    Define themeBufferSize.i = Len(themeXmlStr) * 4 + 10
+    Define *themeBuffer = AllocateMemory(themeBufferSize)
+    If *themeBuffer
+      PokeA(*themeBuffer, $EF)
+      PokeA(*themeBuffer + 1, $BB)
+      PokeA(*themeBuffer + 2, $BF)
+      Define themeStrLen.i = PokeS(*themeBuffer + 3, themeXmlStr, themeBufferSize - 3, #PB_UTF8)
+      Define themeTotalSize.i = 3 + themeStrLen
+      PbXls_ZIPAddMemory(packId, *themeBuffer, themeTotalSize, #PbXls_ARCTheme$)
+      FreeMemory(*themeBuffer)
+    EndIf
+  EndIf
   
   ; 9. xl/worksheets/sheetN.xml
   Define sheetIdx3.i = 0
@@ -1946,11 +3575,794 @@ Procedure.b PbXls_SaveWorkbookToFile(wbId.i, filename.s)
 EndProcedure
 
 ; ***************************************************************************************
+; 分区11: XML读取器（解析Excel文件各部分XML）
+;    参考openpyxl: reader/excel.py, reader/strings.py, reader/workbook.py
+;    使用PureBASIC内置XML库解析Excel xlsx文件中的XML内容
+; ***************************************************************************************
+
+; PbXls_ExtractToTempDir - 将ZIP文件解压到临时目录
+; 参考openpyxl: 使用ZipFile直接读取ZIP内文件
+Procedure.s PbXls_ExtractToTempDir(filename.s)
+  Define tempDir.s = GetTemporaryDirectory() + "PbXls_read_" + Str(Random(999999)) + "\"
+  CreateDirectory(tempDir)
+  
+  Define packId.i = PbXls_ZIPOpen(filename)
+  If packId = 0
+    Debug "[Extract] 无法打开ZIP文件: " + filename
+    ProcedureReturn ""
+  EndIf
+  
+  If PbXls_ZIPExamine(packId) = #False
+    ClosePack(packId)
+    Debug "[Extract] 无法解析ZIP文件"
+    ProcedureReturn ""
+  EndIf
+  
+  Define entryCount.i = 0
+  While PbXls_ZIPNextEntry(packId)
+    Define entryName.s = PbXls_ZIPEntryName(packId)
+    If entryName <> ""
+      entryCount + 1
+      ; 替换正斜杠为反斜杠
+      entryName = ReplaceString(entryName, "/", "\")
+      Define fullPath.s = tempDir + entryName
+      
+      ; 查找最后一个反斜杠位置
+      Define lastSlash.i = 0
+      Define searchPos.i = 1
+      While searchPos <= Len(fullPath)
+        If Mid(fullPath, searchPos, 1) = "\"
+          lastSlash = searchPos
+        EndIf
+        searchPos + 1
+      Wend
+      
+      If lastSlash > 0
+        Define dirPath.s = Left(fullPath, lastSlash - 1)
+        CreateDirectory(dirPath)
+        
+        ; 解压文件
+        Define entrySize.i = PbXls_ZIPEntrySize(packId)
+        If entrySize > 0
+          Define *buffer = AllocateMemory(entrySize)
+          If *buffer
+            PbXls_ZIPExtractToMemory(packId, *buffer, entrySize)
+            Define fOut.i = CreateFile(#PB_Any, fullPath)
+            If fOut
+              WriteData(fOut, *buffer, entrySize)
+              CloseFile(fOut)
+            EndIf
+            FreeMemory(*buffer)
+          EndIf
+        Else
+          ; 空文件也创建一下
+          Define fOut2.i = CreateFile(#PB_Any, fullPath)
+          If fOut2
+            CloseFile(fOut2)
+          EndIf
+        EndIf
+      EndIf
+    EndIf
+  Wend
+  
+  Debug "[Extract] 共解压 " + Str(entryCount) + " 个条目到 " + tempDir
+  ClosePack(packId)
+  ProcedureReturn tempDir
+EndProcedure
+
+; PbXls_CleanupTempDir - 清理临时目录
+Procedure.b PbXls_CleanupTempDir(tempDir.s)
+  ; 简单清理: 删除临时目录下的文件
+  Define searchId.i = ExamineDirectory(#PB_Any, tempDir, "*.*")
+  If searchId
+    While NextDirectoryEntry(searchId)
+      If DirectoryEntryType(searchId) = #PB_DirectoryEntry_File
+        Define fileName.s = DirectoryEntryName(searchId)
+        DeleteFile(tempDir + fileName)
+      ElseIf DirectoryEntryType(searchId) = #PB_DirectoryEntry_Directory
+        If DirectoryEntryName(searchId) <> "." And DirectoryEntryName(searchId) <> ".."
+          PbXls_CleanupTempDir(tempDir + DirectoryEntryName(searchId) + "\")
+        EndIf
+      EndIf
+    Wend
+    FinishDirectory(searchId)
+    ; PureBuilt-in没有RemoveDirectory，使用API
+    RemoveDirectory_(tempDir)
+  EndIf
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_GetNodeNameWithoutNS - 获取节点名(去除命名空间前缀)
+Procedure.s PbXls_GetNodeNameWithoutNS(node.i)
+  Define fullName.s = GetXMLNodeName(node)
+  ; 查找冒号位置，返回冒号后面的部分
+  Define colonPos.i = FindString(fullName, ":", 1)
+  If colonPos > 0
+    ProcedureReturn Mid(fullName, colonPos + 1)
+  EndIf
+  ProcedureReturn fullName
+EndProcedure
+
+; PbXls_ReadSharedStrings - 读取共享字符串表 (xl/sharedStrings.xml)
+; 参考openpyxl: reader/strings.py
+; 输入: XML文档ID
+; 输出: 字符串List (按索引顺序)
+Procedure.b PbXls_ReadSharedStrings(xmlId.i, List stringList.s())
+  If xmlId = 0
+    ProcedureReturn #False
+  EndIf
+  
+  ClearList(stringList())
+  
+  ; 递归遍历XML树查找si节点
+  Define xmlStr.s = PbXls_XMLSaveToString(xmlId)
+  If xmlStr = ""
+    ProcedureReturn #False
+  EndIf
+  
+  ; 简单方式: 按文本解析
+  Define pos.i = 1
+  While pos <= Len(xmlStr)
+    ; 查找 <t> 标记
+    Define tStart.i = FindString(xmlStr, "<t>", pos)
+    If tStart = 0
+      Break
+    EndIf
+    Define tEnd.i = FindString(xmlStr, "</t>", tStart + 3)
+    If tEnd = 0
+      Break
+    EndIf
+    Define tContent.s = Mid(xmlStr, tStart + 3, tEnd - tStart - 3)
+    tContent = PbXls_UnescapeXML(tContent)
+    AddElement(stringList())
+    stringList() = tContent
+    pos = tEnd + 4
+  Wend
+  
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_ReadWorkbookInfo - 读取工作簿信息 (xl/workbook.xml)
+; 参考openpyxl: reader/workbook.py
+; 输出: 工作表名称List 和 activeSheetIndex
+Procedure.b PbXls_ReadWorkbookInfo(xmlId.i, List sheetNames.s(), *activeSheetIndex.Integer)
+  If xmlId = 0
+    ProcedureReturn #False
+  EndIf
+  
+  ClearList(sheetNames())
+  
+  Define rootNode.i = RootXMLNode(xmlId)
+  Define workbookNode.i = ChildXMLNode(rootNode)
+  While workbookNode And PbXls_GetNodeNameWithoutNS(workbookNode) <> "workbook"
+    workbookNode = NextXMLNode(workbookNode)
+  Wend
+  
+  If workbookNode = 0
+    ProcedureReturn #False
+  EndIf
+  
+  ; 读取activeTab (从bookViews中)
+  Define bookViewsNode.i = ChildXMLNode(workbookNode)
+  While bookViewsNode
+    If PbXls_GetNodeNameWithoutNS(bookViewsNode) = "bookViews"
+      Define workbookViewNode.i = ChildXMLNode(bookViewsNode)
+      While workbookViewNode
+        If PbXls_GetNodeNameWithoutNS(workbookViewNode) = "workbookView"
+          Define activeTab.s = GetXMLAttribute(workbookViewNode, "activeTab")
+          If activeTab <> ""
+            *activeSheetIndex\i = Val(activeTab)
+          EndIf
+          Break
+        EndIf
+        workbookViewNode = NextXMLNode(workbookViewNode)
+      Wend
+      Break
+    EndIf
+    bookViewsNode = NextXMLNode(bookViewsNode)
+  Wend
+  
+  ; 读取sheets节点
+  Define sheetsNode.i = ChildXMLNode(workbookNode)
+  While sheetsNode
+    If PbXls_GetNodeNameWithoutNS(sheetsNode) = "sheets"
+      Define sheetNode.i = ChildXMLNode(sheetsNode)
+      While sheetNode
+        If PbXls_GetNodeNameWithoutNS(sheetNode) = "sheet"
+          Define sheetName.s = GetXMLAttribute(sheetNode, "name")
+          If sheetName <> ""
+            AddElement(sheetNames())
+            sheetNames() = sheetName
+          EndIf
+        EndIf
+        sheetNode = NextXMLNode(sheetNode)
+      Wend
+      Break
+    EndIf
+    sheetsNode = NextXMLNode(sheetsNode)
+  Wend
+  
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_ReadWorksheetData - 读取工作表单元格数据 (xl/worksheets/sheetN.xml)
+; 参考openpyxl: worksheet/_reader.py
+; 输入: XML文档ID, 工作表ID, 共享字符串List
+; 输出: 填充PbXls_AllCells Map
+Procedure.b PbXls_ReadWorksheetData(xmlId.i, wsId.i, List sharedStrings.s())
+  If xmlId = 0
+    ProcedureReturn #False
+  EndIf
+  
+  Define rootNode.i = RootXMLNode(xmlId)
+  Define worksheetNode.i = ChildXMLNode(rootNode)
+  While worksheetNode And PbXls_GetNodeNameWithoutNS(worksheetNode) <> "worksheet"
+    worksheetNode = NextXMLNode(worksheetNode)
+  Wend
+  
+  If worksheetNode = 0
+    ProcedureReturn #False
+  EndIf
+  
+  ; 查找sheetData节点
+  Define sheetDataNode.i = ChildXMLNode(worksheetNode)
+  While sheetDataNode
+    If PbXls_GetNodeNameWithoutNS(sheetDataNode) = "sheetData"
+      Break
+    EndIf
+    sheetDataNode = NextXMLNode(sheetDataNode)
+  Wend
+  
+  If sheetDataNode = 0
+    ProcedureReturn #True ; 空工作表
+  EndIf
+  
+  ; 遍历所有行
+  Define rowNode.i = ChildXMLNode(sheetDataNode)
+  While rowNode
+    If PbXls_GetNodeNameWithoutNS(rowNode) = "row"
+      Define rowAttr.s = GetXMLAttribute(rowNode, "r")
+      Define rowNum.i = 0
+      If rowAttr <> ""
+        rowNum = Val(rowAttr)
+      EndIf
+      
+      ; 遍历行中的单元格
+      Define cellNode.i = ChildXMLNode(rowNode)
+      While cellNode
+        If PbXls_GetNodeNameWithoutNS(cellNode) = "c"
+          Define cellRef.s = GetXMLAttribute(cellNode, "r")
+          Define cellType.s = GetXMLAttribute(cellNode, "t")
+          Define cellStyle.s = GetXMLAttribute(cellNode, "s")
+          
+          Define row.i = 0, col.i = 0
+          If cellRef <> ""
+            PbXls_CoordinateToTuple(cellRef, @row, @col)
+          EndIf
+          
+          If row > 0 And col > 0
+            Define key.s = Str(wsId) + "_" + Str(row) + "," + Str(col)
+            Define *cell.PbXls_Cell = @PbXls_AllCells(key)
+            *cell\row = row
+            *cell\column = col
+            
+            If cellStyle <> ""
+              *cell\styleId = Val(cellStyle)
+            EndIf
+            
+            ; 读取单元格值
+            Define valueNode.i = ChildXMLNode(cellNode)
+            Define cellValue.s = ""
+            Define formulaValue.s = ""
+            While valueNode
+              Define vnLocal.s = PbXls_GetNodeNameWithoutNS(valueNode)
+              Select vnLocal
+                Case "v"
+                  cellValue = GetXMLNodeText(valueNode)
+                Case "f"
+                  formulaValue = GetXMLNodeText(valueNode)
+                Case "is"
+                  ; 内联字符串
+                  Define tNode2.i = ChildXMLNode(valueNode)
+                  While tNode2
+                    If PbXls_GetNodeNameWithoutNS(tNode2) = "t"
+                      cellValue = GetXMLNodeText(tNode2)
+                      Break
+                    EndIf
+                    tNode2 = NextXMLNode(tNode2)
+                  Wend
+              EndSelect
+              valueNode = NextXMLNode(valueNode)
+            Wend
+            
+            ; 根据类型设置值
+            Select cellType
+              Case "s"
+                ; 共享字符串
+                Define strIdx.i = Val(cellValue)
+                If SelectElement(sharedStrings(), strIdx)
+                  *cell\value = sharedStrings()
+                  *cell\dataType = #PbXls_DataTypeString
+                EndIf
+              Case "str"
+                ; 公式结果字符串
+                If formulaValue <> ""
+                  *cell\formula = formulaValue
+                  *cell\value = "=" + formulaValue
+                  *cell\dataType = #PbXls_DataTypeFormula
+                Else
+                  *cell\value = cellValue
+                  *cell\dataType = #PbXls_DataTypeString
+                EndIf
+              Case "b"
+                ; 布尔值
+                *cell\value = cellValue
+                *cell\dataType = #PbXls_DataTypeBoolean
+              Case "inlineStr"
+                ; 内联字符串
+                *cell\value = PbXls_UnescapeXML(cellValue)
+                *cell\dataType = #PbXls_DataTypeInline
+              Case "e"
+                ; 错误值
+                *cell\value = cellValue
+                *cell\dataType = #PbXls_DataTypeError
+              Case ""
+                ; 默认: 数值或通用
+                If formulaValue <> ""
+                  *cell\formula = formulaValue
+                  *cell\value = "=" + formulaValue
+                  *cell\dataType = #PbXls_DataTypeFormula
+                Else
+                  *cell\value = cellValue
+                  *cell\dataType = #PbXls_DataTypeNumeric
+                EndIf
+              Default
+                *cell\value = cellValue
+                *cell\dataType = #PbXls_DataTypeString
+            EndSelect
+          EndIf
+        EndIf
+        cellNode = NextXMLNode(cellNode)
+      Wend
+    EndIf
+    rowNode = NextXMLNode(rowNode)
+  Wend
+  
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_ReadMergedCellsFromString - 读取合并单元格信息 (从XML字符串)
+Procedure.b PbXls_ReadMergedCellsFromString(xmlStr.s, wsId.i)
+  If xmlStr = ""
+    Debug "[ReadMergedCells] xmlStr为空"
+    ProcedureReturn #False
+  EndIf
+  
+  Debug "[ReadMergedCells] wsId=" + Str(wsId) + " xmlStr len=" + Str(Len(xmlStr))
+  
+  ; 查找所有 mergeCells 节点内的 mergeCell ref="..." 属性
+  Define pos.i = 1
+  Define foundCount.i = 0
+  While pos <= Len(xmlStr)
+    Define mcTag.i = FindString(xmlStr, "<mergeCell ", pos)
+    If mcTag = 0
+      Break
+    EndIf
+    ; 在该标签内查找ref属性
+    Define tagEnd.i = FindString(xmlStr, ">", mcTag)
+    If tagEnd > 0
+      Define tagContent.s = Mid(xmlStr, mcTag, tagEnd - mcTag + 1)
+      Define refStart.i = FindString(tagContent, ~"ref=\"", 1)
+      If refStart > 0
+        ; ref=" 长度为5，值从+5开始
+        Define refEnd.i = FindString(tagContent, ~"\"", refStart + 5)
+        If refEnd > 0
+          Define ref.s = Mid(tagContent, refStart + 5, refEnd - refStart - 5)
+          ref = UCase(ref)
+          Define mcKey.s = Str(wsId) + "_" + ref
+          PbXls_MergedCells(mcKey) = ref
+          foundCount + 1
+          Debug "[ReadMergedCells] 找到合并单元格: ref=" + ref + " key=" + mcKey
+        EndIf
+      EndIf
+      pos = tagEnd + 1
+    Else
+      pos = mcTag + 1
+    EndIf
+  Wend
+  
+  Debug "[ReadMergedCells] 共找到 " + Str(foundCount) + " 个合并单元格"
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_ReadMergedCells - 读取合并单元格信息 (从xmlId，已废弃，使用FromString版本)
+Procedure.b PbXls_ReadMergedCells(xmlId.i, wsId.i)
+  ProcedureReturn PbXls_ReadMergedCellsFromString("", wsId)
+EndProcedure
+
+; PbXls_ReadColumnWidthsFromString - 读取列宽设置 (从XML字符串)
+; col节点格式: <col min="1" max="1" width="15.0" .../>
+Procedure.b PbXls_ReadColumnWidthsFromString(xmlStr.s, wsId.i)
+  If xmlStr = ""
+    Debug "[ReadColumnWidths] xmlStr为空"
+    ProcedureReturn #False
+  EndIf
+  
+  Debug "[ReadColumnWidths] wsId=" + Str(wsId) + " xmlStr len=" + Str(Len(xmlStr))
+  
+  ; 查找所有 <col 标签，提取其中的min和width属性
+  Define pos.i = 1
+  Define foundCount.i = 0
+  While pos <= Len(xmlStr)
+    Define colTag.i = FindString(xmlStr, "<col ", pos)
+    If colTag = 0
+      Break
+    EndIf
+    ; 确保不是 <cols> 标签
+    Define afterCol.s = Mid(xmlStr, colTag + 4, 2)
+    If afterCol <> "s " And afterCol <> "s>"
+      ; 找到标签结束
+      Define tagEnd.i = FindString(xmlStr, ">", colTag)
+      If tagEnd > 0
+        Define tagContent.s = Mid(xmlStr, colTag, tagEnd - colTag + 1)
+        
+        ; 提取min属性
+        Define minPos.i = FindString(tagContent, ~"min=\"", 1)
+        Define widthPos.i = FindString(tagContent, ~"width=\"", 1)
+        
+        If minPos > 0 And widthPos > 0
+          ; 提取min值
+          Define minEnd.i = FindString(tagContent, ~"\"", minPos + 5)
+          Define minVal.s = ""
+          If minEnd > 0
+            minVal = Mid(tagContent, minPos + 5, minEnd - minPos - 5)
+          EndIf
+          
+          ; 提取width值
+          Define widthEnd.i = FindString(tagContent, ~"\"", widthPos + 7)
+          Define widthVal.s = ""
+          If widthEnd > 0
+            widthVal = Mid(tagContent, widthPos + 7, widthEnd - widthPos - 7)
+          EndIf
+          
+          If minVal <> "" And widthVal <> ""
+            Define colIdx.i = Val(minVal)
+            Define cwKey.s = Str(wsId) + "_" + Str(colIdx)
+            PbXls_ColumnWidths(cwKey) = ValF(widthVal)
+            foundCount + 1
+            Debug "[ReadColumnWidths] 找到列宽: col=" + minVal + " width=" + widthVal + " key=" + cwKey
+          EndIf
+        EndIf
+        
+        pos = tagEnd + 1
+      Else
+        pos = colTag + 1
+      EndIf
+    Else
+      pos = colTag + 5
+    EndIf
+  Wend
+  
+  Debug "[ReadColumnWidths] 共找到 " + Str(foundCount) + " 个列宽"
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_ReadColumnWidths - 读取列宽设置 (从xmlId，已废弃，使用FromString版本)
+Procedure.b PbXls_ReadColumnWidths(xmlId.i, wsId.i)
+  ProcedureReturn PbXls_ReadColumnWidthsFromString("", wsId)
+EndProcedure
+
+; PbXls_ReadRowHeightsFromString - 读取行高设置 (从XML字符串)
+; row节点格式: <row r="1" ht="25.0" ...>
+Procedure.b PbXls_ReadRowHeightsFromString(xmlStr.s, wsId.i)
+  If xmlStr = ""
+    Debug "[ReadRowHeights] xmlStr为空"
+    ProcedureReturn #False
+  EndIf
+  
+  Debug "[ReadRowHeights] wsId=" + Str(wsId) + " xmlStr len=" + Str(Len(xmlStr))
+  
+  ; 查找所有 <row 标签 (在sheetData内)，提取其中的r和ht属性
+  Define pos.i = 1
+  Define foundCount.i = 0
+  While pos <= Len(xmlStr)
+    Define rowTag.i = FindString(xmlStr, "<row ", pos)
+    If rowTag = 0
+      Break
+    EndIf
+    
+    ; 找到标签结束
+    Define tagEnd.i = FindString(xmlStr, ">", rowTag)
+    If tagEnd > 0
+      Define tagContent.s = Mid(xmlStr, rowTag, tagEnd - rowTag + 1)
+      
+      ; 提取r属性(行号)
+      Define rPos.i = FindString(tagContent, ~"r=\"", 1)
+      ; 提取ht属性(行高)
+      Define htPos.i = FindString(tagContent, ~"ht=\"", 1)
+      
+      If rPos > 0 And htPos > 0
+        ; 提取r值
+        Define rEnd.i = FindString(tagContent, ~"\"", rPos + 3)
+        Define rowVal.s = ""
+        If rEnd > 0
+          rowVal = Mid(tagContent, rPos + 3, rEnd - rPos - 3)
+        EndIf
+        
+        ; 提取ht值
+        Define htEnd.i = FindString(tagContent, ~"\"", htPos + 4)
+        Define htVal.s = ""
+        If htEnd > 0
+          htVal = Mid(tagContent, htPos + 4, htEnd - htPos - 4)
+        EndIf
+        
+        If rowVal <> "" And htVal <> ""
+          Define rowNum.i = Val(rowVal)
+          Define rhKey.s = Str(wsId) + "_" + Str(rowNum)
+          PbXls_RowHeights(rhKey) = ValF(htVal)
+          foundCount + 1
+          Debug "[ReadRowHeights] 找到行高: row=" + rowVal + " ht=" + htVal + " key=" + rhKey
+        EndIf
+      EndIf
+      
+      pos = tagEnd + 1
+    Else
+      pos = rowTag + 1
+    EndIf
+  Wend
+  
+  Debug "[ReadRowHeights] 共找到 " + Str(foundCount) + " 个行高"
+  ProcedureReturn #True
+EndProcedure
+
+; PbXls_ReadRowHeights - 读取行高设置 (从xmlId，已废弃，使用FromString版本)
+Procedure.b PbXls_ReadRowHeights(xmlId.i, wsId.i)
+  ProcedureReturn PbXls_ReadRowHeightsFromString("", wsId)
+EndProcedure
+
+; PbXls_ReadSheetSettings - 读取工作表设置(冻结窗格、自动筛选、页面设置等)
+Procedure.b PbXls_ReadSheetSettings(xmlId.i, *ws.PbXls_Worksheet)
+  If xmlId = 0
+    ProcedureReturn #False
+  EndIf
+  
+  Define rootNode.i = RootXMLNode(xmlId)
+  Define worksheetNode.i = ChildXMLNode(rootNode)
+  While worksheetNode And PbXls_GetNodeNameWithoutNS(worksheetNode) <> "worksheet"
+    worksheetNode = NextXMLNode(worksheetNode)
+  Wend
+  
+  If worksheetNode = 0
+    ProcedureReturn #False
+  EndIf
+  
+  ; 读取冻结窗格 (从sheetViews -> sheetView -> pane)
+  Define sheetViewsNode.i = ChildXMLNode(worksheetNode)
+  While sheetViewsNode
+    If PbXls_GetNodeNameWithoutNS(sheetViewsNode) = "sheetViews"
+      Define sheetViewNode.i = ChildXMLNode(sheetViewsNode)
+      While sheetViewNode
+        If PbXls_GetNodeNameWithoutNS(sheetViewNode) = "sheetView"
+          Define paneNode.i = ChildXMLNode(sheetViewNode)
+          While paneNode
+            If PbXls_GetNodeNameWithoutNS(paneNode) = "pane"
+              Define topLeftCell.s = GetXMLAttribute(paneNode, "topLeftCell")
+              If topLeftCell <> ""
+                *ws\freezePanes = topLeftCell
+              EndIf
+              Break
+            EndIf
+            paneNode = NextXMLNode(paneNode)
+          Wend
+          Break
+        EndIf
+        sheetViewNode = NextXMLNode(sheetViewNode)
+      Wend
+      Break
+    EndIf
+    sheetViewsNode = NextXMLNode(sheetViewsNode)
+  Wend
+  
+  ; 读取自动筛选
+  Define autoFilterNode.i = ChildXMLNode(worksheetNode)
+  While autoFilterNode
+    If PbXls_GetNodeNameWithoutNS(autoFilterNode) = "autoFilter"
+      Define ref.s = GetXMLAttribute(autoFilterNode, "ref")
+      If ref <> ""
+        *ws\autoFilter = ref
+      EndIf
+      Break
+    EndIf
+    autoFilterNode = NextXMLNode(autoFilterNode)
+  Wend
+  
+  ; 读取页面设置
+  Define pageSetupNode.i = ChildXMLNode(worksheetNode)
+  While pageSetupNode
+    If PbXls_GetNodeNameWithoutNS(pageSetupNode) = "pageSetup"
+      Define orientation.s = GetXMLAttribute(pageSetupNode, "orientation")
+      If orientation <> ""
+        *ws\orientation = orientation
+      EndIf
+      Define paperSize.s = GetXMLAttribute(pageSetupNode, "paperSize")
+      If paperSize <> ""
+        *ws\paperSize = Val(paperSize)
+      EndIf
+      Break
+    EndIf
+    pageSetupNode = NextXMLNode(pageSetupNode)
+  Wend
+  
+  ProcedureReturn #True
+EndProcedure
+
+; ***************************************************************************************
 ; 分区13: 公共API
 ; ***************************************************************************************
 
+; PbXls_LoadWorkbook - 从文件加载Excel工作簿
+; 参考openpyxl: reader/excel.py ExcelReader.read方法
+; 读取流程: 1.解压 2.读共享字符串 3.读工作簿 4.读工作表 5.清理
 Procedure.i PbXls_LoadWorkbook(filename.s)
-  ProcedureReturn -1
+  ; 检查文件是否存在
+  If FileSize(filename) = -1
+    Debug "[PbXls_LoadWorkbook] 文件不存在: " + filename
+    ProcedureReturn -1
+  EndIf
+  
+  ; 1. 解压xlsx到临时目录
+  Define tempDir.s = PbXls_ExtractToTempDir(filename)
+  If tempDir = ""
+    Debug "[PbXls_LoadWorkbook] 解压失败"
+    ProcedureReturn -1
+  EndIf
+  Debug "[PbXls_LoadWorkbook] 解压到: " + tempDir
+  
+  ; 2. 读取共享字符串表 (xl/sharedStrings.xml)
+  Define NewList sharedStrings.s()
+  Define sharedStringsFile.s = tempDir + "xl\sharedStrings.xml"
+  If FileSize(sharedStringsFile) > 0
+    Define ssXmlId.i = PbXls_XMLParseFile(sharedStringsFile)
+    If ssXmlId
+      PbXls_ReadSharedStrings(ssXmlId, sharedStrings())
+      Debug "[PbXls_LoadWorkbook] 共享字符串数量: " + Str(ListSize(sharedStrings()))
+      FreeXML(ssXmlId)
+    EndIf
+  Else
+    Debug "[PbXls_LoadWorkbook] sharedStrings.xml 不存在"
+  EndIf
+  
+  ; 3. 读取工作簿信息 (xl/workbook.xml)
+  Define workbookFile.s = tempDir + "xl\workbook.xml"
+  If FileSize(workbookFile) = -1
+    Debug "[PbXls_LoadWorkbook] workbook.xml 不存在: " + workbookFile
+    PbXls_CleanupTempDir(tempDir)
+    ProcedureReturn -1
+  EndIf
+  
+  Define wbXmlId.i = PbXls_XMLParseFile(workbookFile)
+  If wbXmlId = 0
+    PbXls_CleanupTempDir(tempDir)
+    ProcedureReturn -1
+  EndIf
+  
+  ; 使用临时数组存储工作表名称 (最多100个)
+  Dim sheetNameArray.s(100)
+  Define sheetNameCount.i = 0
+  Define activeSheetVal.i = 0
+  
+  ; 解析workbook.xml获取工作表名称
+  Define wbXmlStr.s = PbXls_XMLSaveToString(wbXmlId)
+  If wbXmlStr <> ""
+    ; 查找activeTab
+    Define atPos.i = FindString(wbXmlStr, "activeTab=", 1)
+    If atPos > 0
+      Define atEnd.i = FindString(wbXmlStr, " ", atPos)
+      If atEnd = 0 : atEnd = FindString(wbXmlStr, ">", atPos) : EndIf
+      If atEnd > 0
+        Define atVal.s = Mid(wbXmlStr, atPos + 11, atEnd - atPos - 12)
+        atVal = ReplaceString(atVal, ~"\"", "")
+        activeSheetVal = Val(atVal)
+      EndIf
+    EndIf
+    
+    ; 查找所有sheet name属性
+    Define snPos.i = 1
+    While snPos <= Len(wbXmlStr)
+      Define nameAttr.s = "name=" + ~"\""
+      Define naPos.i = FindString(wbXmlStr, nameAttr, snPos)
+      If naPos = 0 : Break : EndIf
+      Define naEnd.i = FindString(wbXmlStr, ~"\"", naPos + 6)
+      If naEnd = 0 : Break : EndIf
+      Define sn.s = Mid(wbXmlStr, naPos + 6, naEnd - naPos - 6)
+      If sn <> "" And sheetNameCount < 100
+        sheetNameArray(sheetNameCount) = sn
+        sheetNameCount + 1
+      EndIf
+      snPos = naEnd + 1
+    Wend
+  EndIf
+  
+  FreeXML(wbXmlId)
+  
+  ; 4. 创建新的工作簿
+  Define wbId.i = PbXls_CreateWorkbook()
+  If wbId = -1
+    PbXls_CleanupTempDir(tempDir)
+    ProcedureReturn -1
+  EndIf
+  
+  ; 5. 获取工作簿指针并设置路径
+  Define *wb.PbXls_Workbook = PbXls_GetWorkbookPtr(wbId)
+  If *wb = 0
+    PbXls_CleanupTempDir(tempDir)
+    ProcedureReturn -1
+  EndIf
+  *wb\path = filename
+  
+  ; 6. 删除默认创建的Sheet并重置计数器
+  Define wbKeyReset.s = Str(wbId)
+  PbXls_WorkbookSheetCount(wbKeyReset) = 0
+  Define defaultSheetCount.i = 1
+  ResetList(PbXls_AllWorksheets())
+  While NextElement(PbXls_AllWorksheets()) And defaultSheetCount > 0
+    If PbXls_AllWorksheets()\parent = wbId
+      DeleteElement(PbXls_AllWorksheets())
+      defaultSheetCount - 1
+      ResetList(PbXls_AllWorksheets())
+    EndIf
+  Wend
+  
+  ; 7. 创建从workbook.xml读取到的工作表
+  Define wsIdx.i = 0
+  While wsIdx < sheetNameCount
+    PbXls_CreateSheet(wbId, sheetNameArray(wsIdx))
+    wsIdx + 1
+  Wend
+  
+  ; 8. 读取每个工作表的XML
+  wsIdx = 0
+  ResetList(PbXls_AllWorksheets())
+  While NextElement(PbXls_AllWorksheets())
+    If PbXls_AllWorksheets()\parent = wbId
+      Define sheetFile.s = tempDir + "xl\worksheets\sheet" + Str(wsIdx + 1) + ".xml"
+      If FileSize(sheetFile) > 0
+        Define wsXmlId.i = PbXls_XMLParseFile(sheetFile)
+        If wsXmlId
+          Define *ws.PbXls_Worksheet = @PbXls_AllWorksheets()
+          
+          ; 读取工作表XML内容（用于文本解析）
+          Define sheetXmlContent.s = PbXls_ReadFileToString(sheetFile)
+          
+          ; 读取单元格数据
+          PbXls_ReadWorksheetData(wsXmlId, *ws\id, sharedStrings())
+          
+          ; 读取合并单元格（使用文件内容而不是XML ID）
+          PbXls_ReadMergedCellsFromString(sheetXmlContent, *ws\id)
+          
+          ; 读取列宽
+          PbXls_ReadColumnWidthsFromString(sheetXmlContent, *ws\id)
+          
+          ; 读取行高
+          PbXls_ReadRowHeightsFromString(sheetXmlContent, *ws\id)
+          
+          ; 读取工作表设置(冻结窗格、自动筛选、页面设置)
+          PbXls_ReadSheetSettings(wsXmlId, *ws)
+          
+          FreeXML(wsXmlId)
+        EndIf
+      EndIf
+      wsIdx + 1
+    EndIf
+  Wend
+  
+  ; 9. 设置活动工作表
+  *wb\activeSheetIndex = activeSheetVal
+  
+  ; 10. 清理临时文件
+  PbXls_CleanupTempDir(tempDir)
+  
+  ProcedureReturn wbId
 EndProcedure
 
 Procedure.b PbXls_SaveWorkbook(workbook.i, filename.s)
@@ -1958,6 +4370,79 @@ Procedure.b PbXls_SaveWorkbook(workbook.i, filename.s)
 EndProcedure
 
 Procedure.b PbXls_CloseWorkbook(workbook.i)
+  Define *wb.PbXls_Workbook = PbXls_GetWorkbookPtr(workbook)
+  If *wb = 0
+    ProcedureReturn #False
+  EndIf
+  
+  ; 1. 娓呯悊涓庤宸ヤ綔绨垮叧鑱旂殑鎵€鏈夊崟鍏冩牸鏁版嵁
+  Define wsKey.s = Str(*wb\id) + "_"
+  Define wsKeyLen.i = Len(wsKey)
+  
+  ForEach PbXls_AllCells()
+    If Left(MapKey(PbXls_AllCells()), wsKeyLen) = wsKey
+      DeleteMapElement(PbXls_AllCells(), MapKey(PbXls_AllCells()))
+    EndIf
+  Next
+  
+  ; 2. 娓呯悊涓庤宸ヤ綔绨垮叧鑱旂殑鎵€鏈夊垪瀹芥暟鎹?
+  ForEach PbXls_ColumnWidths()
+    If Left(MapKey(PbXls_ColumnWidths()), wsKeyLen) = wsKey
+      DeleteMapElement(PbXls_ColumnWidths(), MapKey(PbXls_ColumnWidths()))
+    EndIf
+  Next
+  
+  ; 3. 娓呯悊涓庤宸ヤ綔绨垮叧鑱旂殑鎵€鏈夎楂樻暟鎹?
+  ForEach PbXls_RowHeights()
+    If Left(MapKey(PbXls_RowHeights()), wsKeyLen) = wsKey
+      DeleteMapElement(PbXls_RowHeights(), MapKey(PbXls_RowHeights()))
+    EndIf
+  Next
+  
+  ; 4. 娓呯悊涓庤宸ヤ綔绨垮叧鑱旂殑鎵€鏈夊悎骞跺崟鍏冩牸鏁版嵁 (including margins, headers, print settings)
+  ForEach PbXls_MergedCells()
+    Define mcKey2.s = MapKey(PbXls_MergedCells())
+    If Left(mcKey2, wsKeyLen) = wsKey
+      DeleteMapElement(PbXls_MergedCells(), mcKey2)
+    EndIf
+  Next
+  
+  ; 5. 娓呯悊涓庤宸ヤ綔绨垮叧鑱旂殑鎵€鏈夎秴閾炬帴鍜屾敞閲婃暟鎹?宸插寘鍚湪鍗曞厓鏍间腑,无需单独清理)
+  
+  ; 7. 娓呯悊涓庤宸ヤ綔绨垮叧鑱旂殑鎵€鏈夊伐浣滆〃
+  Define wsIdx.i = 0
+  ResetList(PbXls_AllWorksheets())
+  While NextElement(PbXls_AllWorksheets())
+    If PbXls_AllWorksheets()\parent = *wb\id
+      wsIdx + 1
+    EndIf
+  Wend
+  
+  If wsIdx > 0
+    ResetList(PbXls_AllWorksheets())
+    While NextElement(PbXls_AllWorksheets()) And wsIdx > 0
+      If PbXls_AllWorksheets()\parent = *wb\id
+        DeleteElement(PbXls_AllWorksheets())
+        wsIdx - 1
+        ResetList(PbXls_AllWorksheets())
+      EndIf
+    Wend
+  EndIf
+  
+  ; 8. 娓呯悊宸ヤ綔绨胯鏁?
+  DeleteMapElement(PbXls_WorkbookSheetCount(), Str(*wb\id))
+  
+  ; 9. 娓呯悊鍏变韩瀛楃涓茬储寮曟槧灏?
+  DeleteMapElement(PbXls_WorkbookSharedStrings(), Str(*wb\id))
+  
+  ; 10. 浠庡伐浣滅翱鍒楄〃涓Щ闄?
+  ForEach PbXls_Workbooks()
+    If PbXls_Workbooks()\id = *wb\id
+      DeleteElement(PbXls_Workbooks())
+      Break
+    EndIf
+  Next
+  
   ProcedureReturn #True
 EndProcedure
 
@@ -2037,6 +4522,116 @@ Procedure.b PbXls_SetCellStyleAPI(worksheet.i, row.i, col.i, styleId.i)
   ProcedureReturn PbXls_SetCellStyle(*cell, styleId)
 EndProcedure
 
+Procedure.i PbXls_GetCellStyleAPI(worksheet.i, row.i, col.i)
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn -1
+  EndIf
+  Define *cell.PbXls_Cell = PbXls_GetCell(*ws, row, col)
+  If *cell = 0
+    ProcedureReturn -1
+  EndIf
+  ProcedureReturn PbXls_GetCellStyle(*cell)
+EndProcedure
+
+Procedure.b PbXls_SetCellHyperlinkAPI(worksheet.i, row.i, col.i, url.s, tooltip.s = "")
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  Define *cell.PbXls_Cell = PbXls_GetCell(*ws, row, col)
+  If *cell = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_SetCellHyperlink(*cell, url, tooltip)
+EndProcedure
+
+Procedure.b PbXls_InsertRowsAPI(worksheet.i, row.i, count.i = 1)
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_InsertRows(*ws, row, count)
+EndProcedure
+
+Procedure.b PbXls_DeleteRowsAPI(worksheet.i, row.i, count.i = 1)
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_DeleteRows(*ws, row, count)
+EndProcedure
+
+; 列插入/删除 API
+Procedure.b PbXls_InsertColumnsAPI(worksheet.i, col.i, count.i = 1)
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_InsertColumns(*ws, col, count)
+EndProcedure
+
+Procedure.b PbXls_DeleteColumnsAPI(worksheet.i, col.i, count.i = 1)
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_DeleteColumns(*ws, col, count)
+EndProcedure
+
+; 页边距/打印设置 API
+
+; 页边距/打印设置 API
+Procedure.b PbXls_SetPageMarginsAPI(worksheet.i, left.f = 0.7, right.f = 0.7, top.f = 0.75, bottom.f = 0.75, header.f = 0.3, footer.f = 0.3)
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_SetPageMargins(*ws, left, right, top, bottom, header, footer)
+EndProcedure
+
+Procedure.b PbXls_SetHeaderFooterAPI(worksheet.i, header.s = "", footer.s = "")
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_SetHeaderFooter(*ws, header, footer)
+EndProcedure
+
+Procedure.b PbXls_SetPrintOptionsAPI(worksheet.i, gridLines.b = #True, headings.b = #False, horizontalCentered.b = #False, verticalCentered.b = #False)
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_SetPrintOptions(*ws, gridLines, headings, horizontalCentered, verticalCentered)
+EndProcedure
+
+Procedure.b PbXls_SetOrientationAPI(worksheet.i, orientation.s)
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_SetOrientation(*ws, orientation)
+EndProcedure
+
+Procedure.b PbXls_SetPaperSizeAPI(worksheet.i, paperSize.i)
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_SetPaperSize(*ws, paperSize)
+EndProcedure
+
+Procedure.b PbXls_SetCellCommentAPI(worksheet.i, row.i, col.i, content.s, author.s = "")
+  Define *ws.PbXls_Worksheet = worksheet
+  If *ws = 0
+    ProcedureReturn #False
+  EndIf
+  ProcedureReturn PbXls_SetCellComment(*ws, row, col, content, author)
+EndProcedure
+
+; 样式 API
+
 Procedure.i PbXls_CreateFontAPI()
   ProcedureReturn PbXls_CreateFont()
 EndProcedure
@@ -2115,6 +4710,9 @@ Procedure.b PbXls_Free()
   ClearList(PbXls_CellStyles())
   ClearList(PbXls_AllWorksheets())
   ClearList(PbXls_SharedStrings())
+  ClearList(PbXls_DataValidations())
+  ClearList(PbXls_ConditionalFormats())
+  ClearList(PbXls_Charts())
   ClearMap(PbXls_AllCells())
   ClearMap(PbXls_ColumnWidths())
   ClearMap(PbXls_RowHeights())
@@ -2122,6 +4720,11 @@ Procedure.b PbXls_Free()
   ClearMap(PbXls_MergedCellCount())
   ClearMap(PbXls_WorkbookSheetCount())
   ClearMap(PbXls_WorkbookSharedStrings())
+  ClearMap(PbXls_ChartSeriesName())
+  ClearMap(PbXls_ChartSeriesValues())
+  ClearMap(PbXls_ChartSeriesCategories())
+  PbXls_DxfCounter = 0
+  PbXls_ChartCounter = 0
   ProcedureReturn #True
 EndProcedure
 
