@@ -1,4 +1,4 @@
-﻿; 简单诊断测试
+﻿﻿; 简单诊断测试
 Global logPath.s = GetPathPart(ProgramFilename()) + "pbxls_diag.txt"
 ; 删除旧文件
 DeleteFile(logPath)

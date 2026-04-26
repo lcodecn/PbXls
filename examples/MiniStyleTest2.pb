@@ -1,4 +1,4 @@
-﻿; PbXls MiniStyleTest - 测试样式功能
+﻿﻿; PbXls MiniStyleTest - 测试样式功能
 XIncludeFile "..\PbXls.pb"
 
 Procedure MiniTest()

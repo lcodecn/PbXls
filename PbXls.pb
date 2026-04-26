@@ -8,6 +8,12 @@
 ;       使用PureBasic内置XML和Packer库
 ;       无需安装Microsoft Office或任何第三方依赖
 ;
+; 捐赠支持:
+;   PayPal: https://www.paypal.me/lcodecn
+;   微信:   #付款:lcodecn(经营_lcodecn)/openlib/003
+;
+;   如果这个库对您有帮助，欢迎捐赠支持项目的持续开发和维护。感谢您的慷慨！
+;
 ; 主要功能:
 ;   - 创建和读取Excel xlsx/xlsm文件
 ;   - 读写单元格数据（字符串、数值、公式、布尔、日期等）

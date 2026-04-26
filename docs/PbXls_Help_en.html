@@ -1,0 +1,995 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PbXls Library Reference Documentation</title>
+  <style>
+    body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; padding: 0; background: #f8f8f8; color: #333; }
+    .header { background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%); color: white; padding: 30px; text-align: center; }
+    .header h1 { margin: 0; font-size: 2.2em; }
+    .header .version { font-size: 1em; opacity: 0.9; margin-top: 10px; }
+    .header .author { font-size: 0.9em; opacity: 0.8; margin-top: 5px; }
+    .nav { background: #2b2b2b; padding: 15px; overflow: auto; }
+    .nav a { color: #fff; text-decoration: none; padding: 5px 15px; display: inline-block; font-size: 0.9em; }
+    .nav a:hover { background: #444; border-radius: 4px; }
+    .container { max-width: 960px; margin: 20px auto; padding: 0 20px; }
+    .section { background: white; margin: 20px 0; padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .section h2 { color: #0078d4; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-top: 0; }
+    .section h3 { color: #333; margin-top: 25px; }
+    .function-block { background: #f5f5f5; padding: 15px; margin: 15px 0; border-left: 4px solid #0078d4; border-radius: 0 4px 4px 0; }
+    .function-name { color: #c7254e; font-family: "Consolas", "Courier New", monospace; font-size: 1.1em; font-weight: bold; }
+    .function-desc { margin: 10px 0; line-height: 1.6; }
+    .function-params { margin: 10px 0; }
+    .function-params table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .function-params th { background: #e8e8e8; padding: 8px; text-align: left; border: 1px solid #ddd; }
+    .function-params td { padding: 8px; border: 1px solid #ddd; }
+    .return-type { background: #e8f5e9; padding: 8px; border-radius: 4px; margin: 10px 0; }
+    .example { background: #263238; color: #e0e0e0; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: "Consolas", "Courier New", monospace; font-size: 0.9em; margin: 10px 0; white-space: pre; line-height: 1.6; }
+    .example .comment { color: #80cbc4; }
+    .example .keyword { color: #c792ea; }
+    .example .function { color: #82b1ff; }
+    .example .string { color: #c3e88d; }
+    .example .number { color: #f78c6c; }
+    .example .variable { color: #ffcb6b; }
+    .toc { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .toc h3 { margin-top: 0; }
+    .toc ul { list-style: none; padding-left: 0; }
+    .toc li { padding: 5px 0; border-bottom: 1px solid #f0f0f0; }
+    .toc a { color: #0078d4; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .note { background: #fff3cd; padding: 12px; border-left: 4px solid #ffc107; border-radius: 4px; margin: 15px 0; }
+    .note strong { color: #856404; }
+    .footer { text-align: center; padding: 20px; color: #666; font-size: 0.9em; margin-top: 40px; }
+    code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: "Consolas", "Courier New", monospace; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PbXls Library</h1>
+  <div class="version">Version 2.6</div>
+  <div class="author">Author: lcode.cn | License: Apache 2.0</div>
+</div>
+
+<div class="nav">
+  <a href="#overview">Overview</a>
+  <a href="#workbook">Workbook</a>
+  <a href="#worksheet">Worksheet</a>
+  <a href="#cell">Cell</a>
+  <a href="#style">Style</a>
+  <a href="#columns">Columns</a>
+  <a href="#validation">Validation</a>
+  <a href="#conditional">Conditional</a>
+  <a href="#charts">Charts</a>
+  <a href="#utility">Utility</a>
+  <a href="#examples">Examples</a>
+  <a href="#changelog">Changelog</a>
+  <a href="#donate">Donate</a>
+</div>
+
+<div class="container">
+
+  <div class="section" id="overview">
+    <h2>Overview</h2>
+    <p>PbXls is a PureBasic library for manipulating Excel files, requiring no Microsoft Office or any third-party dependencies to create and read Excel xlsx/xlsm files.</p>
+    <p>This library is ported from the Python openpyxl project, implemented using PureBasic's built-in XML and Packer libraries.</p>
+    <div class="note">
+      <strong>Note:</strong> Before using the PbXls library, you need to add <code>XIncludeFile "PbXls.pb"</code> at the beginning of your code to include the library file. The library initializes automatically; no manual initialization function call is required.
+    </div>
+    <h3>Features</h3>
+    <ul>
+      <li>Create and read Excel xlsx/xlsm files</li>
+      <li>Read and write cell data (string, numeric, formula, boolean, date, etc.)</li>
+      <li>Multiple worksheet support</li>
+      <li>Cell styles (font, fill, border, alignment, number format)</li>
+      <li>Merged cells</li>
+      <li>Row/column width/height settings</li>
+      <li>Column insert/delete (automatically updates cells, column widths, merged cells)</li>
+      <li>Data validation (dropdown lists, integer validation, decimal validation, etc.)</li>
+      <li>Conditional formatting (cell value comparison, formula conditions, color scales)</li>
+      <li>Chart support (bar chart, line chart, pie chart, etc.)</li>
+      <li>Shared strings table optimization</li>
+      <li>Complete ZIP compression support</li>
+    </ul>
+  </div>
+
+  <div class="toc">
+    <h3>Function Index</h3>
+    <ul>
+      <li><a href="#CreateWorkbook">CreateWorkbook</a> - Create a new workbook</li>
+      <li><a href="#LoadWorkbook">LoadWorkbook</a> - Load a workbook</li>
+      <li><a href="#SaveWorkbook">SaveWorkbook</a> - Save a workbook</li>
+      <li><a href="#GetSheetCount">GetSheetCount</a> - Get worksheet count</li>
+      <li><a href="#AddWorksheet">AddWorksheet</a> - Add a worksheet</li>
+      <li><a href="#DeleteWorksheet">DeleteWorksheet</a> - Delete a worksheet</li>
+      <li><a href="#GetSheetByIndex">GetSheetByIndex</a> - Get worksheet by index</li>
+      <li><a href="#GetSheetTitle">GetSheetTitle</a> - Get worksheet name</li>
+      <li><a href="#SetCell">SetCell</a> - Set cell value</li>
+      <li><a href="#SetCellFormula">SetCellFormula</a> - Set cell formula</li>
+      <li><a href="#SetColumnWidth">SetColumnWidth</a> - Set column width</li>
+      <li><a href="#SetRowHeight">SetRowHeight</a> - Set row height</li>
+      <li><a href="#MergeCells">MergeCells</a> - Merge cells</li>
+      <li><a href="#AppendRow">AppendRow</a> - Append row data</li>
+      <li><a href="#GetColumnLetter">GetColumnLetter</a> - Column number to letter</li>
+      <li><a href="#ColumnIndexFromString">ColumnIndexFromString</a> - Column letter to number</li>
+      <li><a href="#EscapeXML">EscapeXML</a> - XML escaping</li>
+      <li><a href="#Free">Free</a> - Release resources</li>
+    </ul>
+  </div>
+
+  <!-- ==================== Workbook Operations ==================== -->
+  <div class="section" id="workbook">
+    <h2>Workbook Operations</h2>
+
+    <div class="function-block" id="CreateWorkbook">
+      <div class="function-name">PbXls_CreateWorkbook()</div>
+      <div class="function-desc">Create a new Excel workbook.</div>
+      <div class="return-type"><strong>Returns:</strong> Workbook ID (integer). Returns -1 on failure.</div>
+      <div class="example">
+<span class="comment">; Create a new workbook</span>
+<span class="variable">wbId</span> = <span class="function">PbXls_CreateWorkbook</span>()
+<span class="keyword">If</span> <span class="variable">wbId</span> &gt;= 0
+  <span class="comment">; Workbook created successfully</span>
+<span class="keyword">EndIf</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="LoadWorkbook">
+      <div class="function-name">PbXls_LoadWorkbook(filename.s)</div>
+      <div class="function-desc">Load an existing Excel workbook file.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>filename</td><td>String</td><td>Full path to the Excel file</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> Workbook ID (integer). Returns -1 on failure.</div>
+      <div class="note">
+        <strong>Note:</strong> The read functionality is currently a placeholder implementation. Full read functionality will be implemented in future versions.
+      </div>
+    </div>
+
+    <div class="function-block" id="SaveWorkbook">
+      <div class="function-name">PbXls_SaveWorkbook(wbId.i, filename.s)</div>
+      <div class="function-desc">Save the workbook as an Excel file. This function generates an xlsx/xlsm file compliant with the Office Open XML standard.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wbId</td><td>Integer</td><td>Workbook ID (returned by CreateWorkbook or LoadWorkbook)</td></tr>
+          <tr><td>filename</td><td>String</td><td>Full path for the output file (.xlsx or .xlsm extension)</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+      <div class="example">
+<span class="comment">; Save workbook to file</span>
+<span class="keyword">If</span> <span class="function">PbXls_SaveWorkbook</span>(<span class="variable">wbId</span>, <span class="string">"output.xlsx"</span>)
+  <span class="function">Debug</span> <span class="string">"Save successful!"</span>
+<span class="keyword">Else</span>
+  <span class="function">Debug</span> <span class="string">"Save failed!"</span>
+<span class="keyword">EndIf</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="GetSheetCount">
+      <div class="function-name">PbXls_GetSheetCount(wbId.i)</div>
+      <div class="function-desc">Get the number of worksheets in the workbook.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wbId</td><td>Integer</td><td>Workbook ID</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> Number of worksheets (integer).</div>
+    </div>
+  </div>
+
+  <!-- ==================== Worksheet Operations ==================== -->
+  <div class="section" id="worksheet">
+    <h2>Worksheet Operations</h2>
+
+    <div class="function-block" id="AddWorksheet">
+      <div class="function-name">PbXls_AddWorksheet(wbId.i, title.s = "")</div>
+      <div class="function-desc">Add a new worksheet to the workbook.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wbId</td><td>Integer</td><td>Workbook ID</td></tr>
+          <tr><td>title</td><td>String</td><td>Worksheet name. If empty, a name in "SheetN" format will be auto-generated</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> Worksheet ID (integer). Returns -1 on failure.</div>
+      <div class="example">
+<span class="comment">; Add a worksheet with default name</span>
+<span class="variable">wsId1</span> = <span class="function">PbXls_AddWorksheet</span>(<span class="variable">wbId</span>)
+<span class="comment">; Result: Sheet2</span>
+
+<span class="comment">; Add a worksheet with specified name</span>
+<span class="variable">wsId2</span> = <span class="function">PbXls_AddWorksheet</span>(<span class="variable">wbId</span>, <span class="string">"Statistics"</span>)
+<span class="comment">; Result: Statistics</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="DeleteWorksheet">
+      <div class="function-name">PbXls_DeleteWorksheet(wbId.i, index.i)</div>
+      <div class="function-desc">Delete the worksheet at the specified index in the workbook.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wbId</td><td>Integer</td><td>Workbook ID</td></tr>
+          <tr><td>index</td><td>Integer</td><td>Index of the worksheet to delete (0-based)</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+      <div class="note">
+        <strong>Note:</strong> A workbook must have at least one worksheet. If only one worksheet remains, it cannot be deleted.
+      </div>
+    </div>
+
+    <div class="function-block" id="GetSheetByIndex">
+      <div class="function-name">PbXls_GetSheetByIndex(wbId.i, index.i)</div>
+      <div class="function-desc">Get a worksheet by index. Returns a worksheet pointer for subsequent operations.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wbId</td><td>Integer</td><td>Workbook ID</td></tr>
+          <tr><td>index</td><td>Integer</td><td>Worksheet index (0-based)</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> Worksheet pointer. Returns 0 if the index is invalid.</div>
+      <div class="example">
+<span class="comment">; Get the first worksheet</span>
+<span class="variable">wsId</span> = <span class="function">PbXls_GetSheetByIndex</span>(<span class="variable">wbId</span>, 0)
+<span class="keyword">If</span> <span class="variable">wsId</span> &gt; 0
+  <span class="comment">; Ready to operate on the worksheet</span>
+<span class="keyword">EndIf</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="GetSheetTitle">
+      <div class="function-name">PbXls_GetSheetTitle(wsId.i)</div>
+      <div class="function-desc">Get the name of the worksheet.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>Worksheet ID</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> Worksheet name (string).</div>
+    </div>
+
+    <div class="function-block" id="SetColumnWidth">
+      <div class="function-name">PbXls_SetColumnWidth(wsId.i, col.i, width.f)</div>
+      <div class="function-desc">Set the width of the specified column.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>Worksheet ID</td></tr>
+          <tr><td>col</td><td>Integer</td><td>Column number (1-based)</td></tr>
+          <tr><td>width</td><td>Float</td><td>Column width value</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+      <div class="example">
+<span class="comment">; Set column 1 width to 20</span>
+<span class="function">PbXls_SetColumnWidth</span>(<span class="variable">wsId</span>, 1, 20.0)
+<span class="comment">; Set column 3 width to 15.5</span>
+<span class="function">PbXls_SetColumnWidth</span>(<span class="variable">wsId</span>, 3, 15.5)
+      </div>
+    </div>
+
+    <div class="function-block" id="SetRowHeight">
+      <div class="function-name">PbXls_SetRowHeight(wsId.i, row.i, height.f)</div>
+      <div class="function-desc">Set the height of the specified row.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>Worksheet ID</td></tr>
+          <tr><td>row</td><td>Integer</td><td>Row number (1-based)</td></tr>
+          <tr><td>height</td><td>Float</td><td>Row height value</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+    </div>
+
+    <div class="function-block" id="MergeCells">
+      <div class="function-name">PbXls_MergeCells(wsId.i, rangeString.s)</div>
+      <div class="function-desc">Merge cells in the specified range. Range format is "A1:B2" or "A1:D4".</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>Worksheet ID</td></tr>
+          <tr><td>rangeString</td><td>String</td><td>Merge range, e.g. "A1:B2"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+      <div class="example">
+<span class="comment">; Merge range A1 to B2</span>
+<span class="function">PbXls_MergeCells</span>(<span class="variable">wsId</span>, <span class="string">"A1:B2"</span>)
+<span class="comment">; Merge range A1 to D4</span>
+<span class="function">PbXls_MergeCells</span>(<span class="variable">wsId</span>, <span class="string">"A1:D4"</span>)
+      </div>
+    </div>
+
+    <div class="function-block" id="UnmergeCells">
+      <div class="function-name">PbXls_UnmergeCells(wsId.i, rangeString.s)</div>
+      <div class="function-desc">Unmerge cells in the specified range.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>Worksheet ID</td></tr>
+          <tr><td>rangeString</td><td>String</td><td>Range to unmerge, e.g. "A1:B2"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+    </div>
+
+    <div class="function-block" id="AppendRow">
+      <div class="function-name">PbXls_AppendRow(wsId.i, List values.s())</div>
+      <div class="function-desc">Append a row of data at the end of the worksheet. Data will be written starting from the next row after the current row, filling each column in order.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>Worksheet ID</td></tr>
+          <tr><td>values</td><td>List String</td><td>List of strings to write, each element corresponds to a column</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+      <div class="example">
+<span class="keyword">NewList</span> <span class="variable">data</span>.<span class="keyword">s</span>()
+
+<span class="function">AddElement</span>(<span class="variable">data</span>())
+<span class="variable">data</span>() = <span class="string">"Name"</span>
+<span class="function">AddElement</span>(<span class="variable">data</span>())
+<span class="variable">data</span>() = <span class="string">"Age"</span>
+<span class="function">AddElement</span>(<span class="variable">data</span>())
+<span class="variable">data</span>() = <span class="string">"City"</span>
+
+<span class="function">PbXls_AppendRow</span>(<span class="variable">wsId</span>, <span class="variable">data</span>())
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Cell Operations ==================== -->
+  <div class="section" id="cell">
+    <h2>Cell Operations</h2>
+
+    <div class="function-block" id="SetCell">
+      <div class="function-name">PbXls_SetCell(wsId.i, row.i, col.i, value.s)</div>
+      <div class="function-desc">Set the value of the specified cell. The cell data type is automatically inferred from the value (string, numeric, boolean, etc.).</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>Worksheet ID</td></tr>
+          <tr><td>row</td><td>Integer</td><td>Row number (1-based)</td></tr>
+          <tr><td>col</td><td>Integer</td><td>Column number (1-based)</td></tr>
+          <tr><td>value</td><td>String</td><td>Cell value</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+      <div class="example">
+<span class="comment">; Write string</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 1, <span class="string">"Hello PbXls!"</span>)
+<span class="comment">; Write numeric value</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 2, <span class="string">"123.45"</span>)
+<span class="comment">; Write boolean</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 3, <span class="string">"true"</span>)
+<span class="comment">; Write date</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 4, <span class="string">"2026-04-20"</span>)
+      </div>
+    </div>
+
+    <div class="function-block" id="SetCellFormula">
+      <div class="function-name">PbXls_SetCellFormula(wsId.i, row.i, col.i, formula.s)</div>
+      <div class="function-desc">Set the formula for the specified cell. The formula must start with "=".</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>Worksheet ID</td></tr>
+          <tr><td>row</td><td>Integer</td><td>Row number (1-based)</td></tr>
+          <tr><td>col</td><td>Integer</td><td>Column number (1-based)</td></tr>
+          <tr><td>formula</td><td>String</td><td>Cell formula, e.g. "=SUM(A1:A10)"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+      <div class="example">
+<span class="comment">; Set sum formula</span>
+<span class="function">PbXls_SetCellFormula</span>(<span class="variable">wsId</span>, 11, 1, <span class="string">"=SUM(A1:A10)"</span>)
+<span class="comment">; Set average formula</span>
+<span class="function">PbXls_SetCellFormula</span>(<span class="variable">wsId</span>, 11, 2, <span class="string">"=AVERAGE(B1:B10)"</span>)
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Style Operations ==================== -->
+  <div class="section" id="style">
+    <h2>Style Operations</h2>
+
+    <div class="function-block">
+      <div class="function-name">PbXls_CreateFont(name.s = "Calibri", size.f = 11.0, color.s = "000000", bold.b = #False, italic.b = #False, underline.b = #False)</div>
+      <div class="function-desc">Create a font style.</div>
+      <div class="return-type"><strong>Returns:</strong> Font style ID (integer).</div>
+    </div>
+
+    <div class="function-block">
+      <div class="function-name">PbXls_CreateFill(patternFill.s = "none", fgColor.s = "", bgColor.s = "")</div>
+      <div class="function-desc">Create a fill style.</div>
+      <div class="return-type"><strong>Returns:</strong> Fill style ID (integer).</div>
+    </div>
+
+    <div class="function-block">
+      <div class="function-name">PbXls_CreateBorderStyle(top.s = "none", right.s = "none", bottom.s = "none", left.s = "none", color.s = "000000")</div>
+      <div class="function-desc">Create a border style.</div>
+      <div class="return-type"><strong>Returns:</strong> Border style ID (integer).</div>
+    </div>
+
+    <div class="function-block">
+      <div class="function-name">PbXls_CreateAlignment(horizontal.s = "", vertical.s = "", wrapText.b = #False)</div>
+      <div class="function-desc">Create an alignment style.</div>
+      <div class="return-type"><strong>Returns:</strong> Alignment style ID (integer).</div>
+    </div>
+  </div>
+
+  <!-- ==================== Column Operations ==================== -->
+  <div class="section" id="columns">
+    <h2>Column Operations</h2>
+
+    <div class="function-block" id="InsertColumns">
+      <div class="function-name">PbXls_InsertColumns(wsId.i, colIdx.i, count.i = 1)</div>
+      <div class="function-desc">Insert columns at the specified position. After insertion, the column and all cells to its right will shift right. Column widths and merged cell ranges will be automatically updated.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>Worksheet ID</td></tr>
+          <tr><td>colIdx</td><td>Integer</td><td>Column number at insertion position (1-based)</td></tr>
+          <tr><td>count</td><td>Integer</td><td>Number of columns to insert, default is 1</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+      <div class="example">
+<span class="comment">; Insert 2 columns before column 3</span>
+<span class="function">PbXls_InsertColumns</span>(<span class="variable">wsId</span>, 3, 2)
+<span class="comment">; Original column C and all columns to the right shift right by 2</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="DeleteColumns">
+      <div class="function-name">PbXls_DeleteColumns(wsId.i, colIdx.i, count.i = 1)</div>
+      <div class="function-desc">Delete columns at the specified position. After deletion, cells to the right will shift left. Column widths and merged cell ranges will be automatically updated.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>wsId</td><td>Integer</td><td>Worksheet ID</td></tr>
+          <tr><td>colIdx</td><td>Integer</td><td>Starting column number to delete (1-based)</td></tr>
+          <tr><td>count</td><td>Integer</td><td>Number of columns to delete, default is 1</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+      <div class="example">
+<span class="comment">; Delete column 2 (column B)</span>
+<span class="function">PbXls_DeleteColumns</span>(<span class="variable">wsId</span>, 2, 1)
+<span class="comment">; Original column C and all columns to the right shift left by 1</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Data Validation ==================== -->
+  <div class="section" id="validation">
+    <h2>Data Validation</h2>
+
+    <div class="function-block" id="CreateDataValidation">
+      <div class="function-name">PbXls_CreateDataValidation(type.s, sqref.s, formula1.s = "", formula2.s = "", operator.s = "between")</div>
+      <div class="function-desc">Create a data validation rule. Supports multiple validation types: list (dropdown), whole (integer), decimal, textLength, date, time, custom (custom formula).</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>type</td><td>String</td><td>Validation type, e.g. "list", "whole", "decimal", etc.</td></tr>
+          <tr><td>sqref</td><td>String</td><td>Application range, e.g. "A1:A10"</td></tr>
+          <tr><td>formula1</td><td>String</td><td>Formula or value (comma-separated options for list type)</td></tr>
+          <tr><td>formula2</td><td>String</td><td>Second formula (required for some operators)</td></tr>
+          <tr><td>operator</td><td>String</td><td>Operator, e.g. "between", "greaterThan", etc.</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> Validation rule ID (integer).</div>
+      <div class="example">
+<span class="comment">; Create dropdown list validation</span>
+<span class="variable">dv1</span> = <span class="function">PbXls_CreateDataValidation</span>(<span class="string">"list"</span>, <span class="string">"B2:B10"</span>, <span class="string">"Option1,Option2,Option3"</span>)
+
+<span class="comment">; Create integer range validation</span>
+<span class="variable">dv2</span> = <span class="function">PbXls_CreateDataValidation</span>(<span class="string">"whole"</span>, <span class="string">"C2:C10"</span>, <span class="string">"18"</span>, <span class="string">"65"</span>, <span class="string">"between"</span>)
+      </div>
+    </div>
+
+    <div class="function-block" id="SetValidationPrompt">
+      <div class="function-name">PbXls_SetValidationPrompt(validationId.i, title.s, message.s)</div>
+      <div class="function-desc">Set the input prompt for data validation. Displayed when the cell receives focus.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>validationId</td><td>Integer</td><td>Validation rule ID</td></tr>
+          <tr><td>title</td><td>String</td><td>Prompt title</td></tr>
+          <tr><td>message</td><td>String</td><td>Prompt message</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+    </div>
+
+    <div class="function-block" id="SetValidationError">
+      <div class="function-name">PbXls_SetValidationError(validationId.i, title.s, message.s)</div>
+      <div class="function-desc">Set the error prompt for data validation. Displayed when an invalid value is entered.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>validationId</td><td>Integer</td><td>Validation rule ID</td></tr>
+          <tr><td>title</td><td>String</td><td>Error title</td></tr>
+          <tr><td>message</td><td>String</td><td>Error message</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+    </div>
+  </div>
+
+  <!-- ==================== Conditional Formatting ==================== -->
+  <div class="section" id="conditional">
+    <h2>Conditional Formatting</h2>
+
+    <div class="function-block" id="CreateConditionalFormat">
+      <div class="function-name">PbXls_CreateConditionalFormat(type.s, sqref.s, formula1.s = "", formula2.s = "", operator.s = "greaterThan")</div>
+      <div class="function-desc">Create a conditional formatting rule. Supported types: cellIs (cell value comparison), expression (formula), colorScale (color scale), dataBar (data bar), iconSet (icon set).</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>type</td><td>String</td><td>Rule type, e.g. "cellIs", "expression", "colorScale"</td></tr>
+          <tr><td>sqref</td><td>String</td><td>Application range, e.g. "A1:A10"</td></tr>
+          <tr><td>formula1</td><td>String</td><td>Formula or comparison value</td></tr>
+          <tr><td>formula2</td><td>String</td><td>Second formula</td></tr>
+          <tr><td>operator</td><td>String</td><td>Operator, e.g. "greaterThan", "lessThan", "between", etc.</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> Rule ID (integer).</div>
+      <div class="example">
+<span class="comment">; Red bold when cell value > 85</span>
+<span class="variable">cf1</span> = <span class="function">PbXls_CreateConditionalFormat</span>(<span class="string">"cellIs"</span>, <span class="string">"E2:E10"</span>, <span class="string">"85"</span>, <span class="string">""</span>, <span class="string">"greaterThan"</span>)
+<span class="function">PbXls_SetConditionalFormatDxf</span>(<span class="variable">cf1</span>, <span class="string">"FF0000"</span>, <span class="string">""</span>, <span class="variable">#True</span>, <span class="variable">#False</span>)
+
+<span class="comment">; Color scale (red-yellow-green)</span>
+<span class="variable">cf2</span> = <span class="function">PbXls_CreateConditionalFormat</span>(<span class="string">"colorScale"</span>, <span class="string">"D2:D10"</span>)
+<span class="function">PbXls_SetConditionalFormatColorScale</span>(<span class="variable">cf2</span>, <span class="string">"FF0000"</span>, <span class="string">"FFFF00"</span>, <span class="string">"00FF00"</span>)
+      </div>
+    </div>
+
+    <div class="function-block" id="SetConditionalFormatDxf">
+      <div class="function-name">PbXls_SetConditionalFormatDxf(ruleId.i, fontColor.s = "", fillColor.s = "", fontBold.b = -1, fontItalic.b = -1)</div>
+      <div class="function-desc">Set the differential style (Dxf) for conditional formatting, including font color, fill color, bold, and italic.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>ruleId</td><td>Integer</td><td>Rule ID</td></tr>
+          <tr><td>fontColor</td><td>String</td><td>Font color, e.g. "FF0000" (red)</td></tr>
+          <tr><td>fillColor</td><td>String</td><td>Fill color, e.g. "FFFF00" (yellow)</td></tr>
+          <tr><td>fontBold</td><td>Boolean</td><td>Bold (-1 means unchanged)</td></tr>
+          <tr><td>fontItalic</td><td>Boolean</td><td>Italic (-1 means unchanged)</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+    </div>
+
+    <div class="function-block" id="SetConditionalFormatColorScale">
+      <div class="function-name">PbXls_SetConditionalFormatColorScale(ruleId.i, minColor.s = "", midColor.s = "", maxColor.s = "", minType.s = "", midType.s = "", maxType.s = "")</div>
+      <div class="function-desc">Set color scale parameters, including min/mid/max colors and their types.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>ruleId</td><td>Integer</td><td>Rule ID</td></tr>
+          <tr><td>minColor</td><td>String</td><td>Minimum value color</td></tr>
+          <tr><td>midColor</td><td>String</td><td>Middle value color</td></tr>
+          <tr><td>maxColor</td><td>String</td><td>Maximum value color</td></tr>
+          <tr><td>minType</td><td>String</td><td>Minimum value type, e.g. "min", "num", "percentile"</td></tr>
+          <tr><td>midType</td><td>String</td><td>Middle value type</td></tr>
+          <tr><td>maxType</td><td>String</td><td>Maximum value type, e.g. "max", "num", "percentile"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+    </div>
+  </div>
+
+  <!-- ==================== Charts ==================== -->
+  <div class="section" id="charts">
+    <h2>Charts</h2>
+    <div class="note">
+      <strong>Note:</strong> The chart feature is currently an interface implementation. Complete XML generation logic will be refined in future versions.
+    </div>
+
+    <div class="function-block" id="CreateChart">
+      <div class="function-name">PbXls_CreateChart(type.s, title.s = "", anchorRef.s = "A1:F20")</div>
+      <div class="function-desc">Create a chart. Supported types: barChart (bar chart), lineChart (line chart), pieChart (pie chart), scatterChart (scatter chart), areaChart (area chart).</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>type</td><td>String</td><td>Chart type</td></tr>
+          <tr><td>title</td><td>String</td><td>Chart title</td></tr>
+          <tr><td>anchorRef</td><td>String</td><td>Anchor range, e.g. "A1:F20"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> Chart ID (integer).</div>
+    </div>
+
+    <div class="function-block" id="AddChartSeries">
+      <div class="function-name">PbXls_AddChartSeries(chartId.i, name.s, values.s, categories.s = "")</div>
+      <div class="function-desc">Add a chart data series.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>chartId</td><td>Integer</td><td>Chart ID</td></tr>
+          <tr><td>name</td><td>String</td><td>Series name</td></tr>
+          <tr><td>values</td><td>String</td><td>Value range, e.g. "A2:A10"</td></tr>
+          <tr><td>categories</td><td>String</td><td>Category range, e.g. "B2:B10"</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> #True on success, #False on failure.</div>
+    </div>
+  </div>
+
+  <!-- ==================== Utility Functions ==================== -->
+  <div class="section" id="utility">
+    <h2>Utility Functions</h2>
+
+    <div class="function-block" id="GetColumnLetter">
+      <div class="function-name">PbXls_GetColumnLetter(colNum.i)</div>
+      <div class="function-desc">Convert a column number to a column letter. For example, 1 converts to "A", 27 converts to "AA".</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>colNum</td><td>Integer</td><td>Column number (1-based)</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> Column letter (string).</div>
+      <div class="example">
+<span class="variable">letter</span> = <span class="function">PbXls_GetColumnLetter</span>(1)   <span class="comment">; Returns "A"</span>
+<span class="variable">letter</span> = <span class="function">PbXls_GetColumnLetter</span>(27)  <span class="comment">; Returns "AA"</span>
+<span class="variable">letter</span> = <span class="function">PbXls_GetColumnLetter</span>(702) <span class="comment">; Returns "ZZ"</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="ColumnIndexFromString">
+      <div class="function-name">PbXls_ColumnIndexFromString(colLetter.s)</div>
+      <div class="function-desc">Convert a column letter to a column number. For example, "A" converts to 1, "AA" converts to 27.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>colLetter</td><td>String</td><td>Column letter (e.g. "A", "AA", "ZZ")</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> Column number (integer).</div>
+      <div class="example">
+<span class="variable">num</span> = <span class="function">PbXls_ColumnIndexFromString</span>(<span class="string">"A"</span>)   <span class="comment">; Returns 1</span>
+<span class="variable">num</span> = <span class="function">PbXls_ColumnIndexFromString</span>(<span class="string">"AA"</span>)  <span class="comment">; Returns 27</span>
+<span class="variable">num</span> = <span class="function">PbXls_ColumnIndexFromString</span>(<span class="string">"ZZ"</span>) <span class="comment">; Returns 702</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="EscapeXML">
+      <div class="function-name">PbXls_EscapeXML(str.s)</div>
+      <div class="function-desc">Escape XML special characters in a string. Converts &amp;, &lt;, &gt;, " and ' to XML entities.</div>
+      <div class="function-params">
+        <table>
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>str</td><td>String</td><td>String to escape</td></tr>
+        </table>
+      </div>
+      <div class="return-type"><strong>Returns:</strong> Escaped string.</div>
+      <div class="example">
+<span class="variable">escaped</span> = <span class="function">PbXls_EscapeXML</span>(<span class="string">"A < B & C > D"</span>)
+<span class="comment">; Returns "A &lt; B &amp; C &gt; D"</span>
+      </div>
+    </div>
+
+    <div class="function-block" id="Free">
+      <div class="function-name">PbXls_Free()</div>
+      <div class="function-desc">Release all resources used by the PbXls library. This function should be called before the program exits.</div>
+      <div class="return-type"><strong>Returns:</strong> #True on success.</div>
+      <div class="example">
+<span class="comment">; Clean up resources before program exit</span>
+<span class="function">PbXls_Free</span>()
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Example Code ==================== -->
+  <div class="section" id="examples">
+    <h2>Example Code</h2>
+
+    <h3>Example 1: Create a Basic Excel File</h3>
+    <div class="example">
+<span class="comment">; PbXls - Create a basic Excel file example</span>
+<span class="keyword">XIncludeFile</span> <span class="string">"PbXls.pb"</span>
+
+<span class="comment">; Create workbook</span>
+<span class="variable">wbId</span> = <span class="function">PbXls_CreateWorkbook</span>()
+
+<span class="comment">; Get the first worksheet</span>
+<span class="variable">wsId</span> = <span class="function">PbXls_GetSheetByIndex</span>(<span class="variable">wbId</span>, 0)
+
+<span class="comment">; Write headers</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 1, <span class="string">"Name"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 2, <span class="string">"Age"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 3, <span class="string">"City"</span>)
+
+<span class="comment">; Write data rows</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 2, 1, <span class="string">"Alice"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 2, 2, <span class="string">"25"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 2, 3, <span class="string">"New York"</span>)
+
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 3, 1, <span class="string">"Bob"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 3, 2, <span class="string">"30"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 3, 3, <span class="string">"London"</span>)
+
+<span class="comment">; Save file</span>
+<span class="function">PbXls_SaveWorkbook</span>(<span class="variable">wbId</span>, <span class="string">"example1.xlsx"</span>)
+
+<span class="comment">; Clean up resources</span>
+<span class="function">PbXls_Free</span>()
+    </div>
+
+    <h3>Example 2: Create an Excel File with Formulas</h3>
+    <div class="example">
+<span class="comment">; PbXls - Create an Excel file with formulas example</span>
+<span class="keyword">XIncludeFile</span> <span class="string">"PbXls.pb"</span>
+
+<span class="comment">; Create workbook</span>
+<span class="variable">wbId</span> = <span class="function">PbXls_CreateWorkbook</span>()
+<span class="variable">wsId</span> = <span class="function">PbXls_GetSheetByIndex</span>(<span class="variable">wbId</span>, 0)
+
+<span class="comment">; Write headers</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 1, <span class="string">"Item"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 2, <span class="string">"Amount"</span>)
+
+<span class="comment">; Write data</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 2, 1, <span class="string">"Salary"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 2, 2, <span class="string">"10000"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 3, 1, <span class="string">"Bonus"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 3, 2, <span class="string">"5000"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 4, 1, <span class="string">"Other"</span>)
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 4, 2, <span class="string">"2000"</span>)
+
+<span class="comment">; Add sum formula</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 5, 1, <span class="string">"Total"</span>)
+<span class="function">PbXls_SetCellFormula</span>(<span class="variable">wsId</span>, 5, 2, <span class="string">"=SUM(B2:B4)"</span>)
+
+<span class="comment">; Save file</span>
+<span class="function">PbXls_SaveWorkbook</span>(<span class="variable">wbId</span>, <span class="string">"example2_formula.xlsx"</span>)
+
+<span class="comment">; Clean up resources</span>
+<span class="function">PbXls_Free</span>()
+    </div>
+
+    <h3>Example 3: Create an Excel File with Styles</h3>
+    <div class="example">
+<span class="comment">; PbXls - Create an Excel file with styles example</span>
+<span class="keyword">XIncludeFile</span> <span class="string">"PbXls.pb"</span>
+
+<span class="comment">; Create workbook</span>
+<span class="variable">wbId</span> = <span class="function">PbXls_CreateWorkbook</span>()
+<span class="variable">wsId</span> = <span class="function">PbXls_GetSheetByIndex</span>(<span class="variable">wbId</span>, 0)
+
+<span class="comment">; Write data and set column width</span>
+<span class="function">PbXls_SetCell</span>(<span class="variable">wsId</span>, 1, 1, <span class="string">"Report Title"</span>)
+<span class="function">PbXls_SetColumnWidth</span>(<span class="variable">wsId</span>, 1, 30.0)
+
+<span class="comment">; Merge cells</span>
+<span class="function">PbXls_MergeCells</span>(<span class="variable">wsId</span>, <span class="string">"A1:C1"</span>)
+
+<span class="comment">; Write multiple rows of data</span>
+<span class="keyword">NewList</span> <span class="variable">row1</span>.<span class="keyword">s</span>()
+<span class="function">AddElement</span>(<span class="variable">row1</span>())
+<span class="variable">row1</span>() = <span class="string">"Data1"</span>
+<span class="function">AddElement</span>(<span class="variable">row1</span>())
+<span class="variable">row1</span>() = <span class="string">"Data2"</span>
+<span class="function">AddElement</span>(<span class="variable">row1</span>())
+<span class="variable">row1</span>() = <span class="string">"Data3"</span>
+<span class="function">PbXls_AppendRow</span>(<span class="variable">wsId</span>, <span class="variable">row1</span>())
+
+<span class="comment">; Save file</span>
+<span class="function">PbXls_SaveWorkbook</span>(<span class="variable">wbId</span>, <span class="string">"example3_style.xlsx"</span>)
+
+<span class="comment">; Clean up resources</span>
+<span class="function">PbXls_Free</span>()
+    </div>
+  </div>
+
+  <!-- ==================== Changelog ==================== -->
+  <div class="section" id="changelog">
+    <h2>Version History</h2>
+    
+    <h3>v2.6 (2026-04-22)</h3>
+    <ul>
+      <li>[New] Data validation feature (PbXls_CreateDataValidation), supporting dropdown lists, integer validation, decimal validation, etc.</li>
+      <li>[New] Conditional formatting feature (PbXls_CreateConditionalFormat), supporting cell value comparison, formula conditions, color scales</li>
+      <li>[New] Chart feature interface (PbXls_CreateChart, PbXls_AddChartSeries)</li>
+      <li>[New] Complete test suite (FeaturesTest, etc.)</li>
+    </ul>
+
+    <h3>v2.5 (2026-04-22)</h3>
+    <ul>
+      <li>[New] Column insert feature (PbXls_InsertColumns), supporting inserting multiple columns at specified position</li>
+      <li>[New] Column delete feature (PbXls_DeleteColumns), supporting deleting columns within specified range</li>
+      <li>[New] Automatic update of cell positions, column widths, and merged cell ranges when inserting/deleting columns</li>
+      <li>[Fix] PbXls_Free missing cleanup of newly added global lists (data validation, conditional formatting, charts)</li>
+      <li>[New] Complete test suite (ColumnTest, etc.)</li>
+    </ul>
+
+    <h3>v2.4 (2026-04-21)</h3>
+    <ul>
+      <li>[New] Convenient style API (PbXls_SetCellStyleWS)</li>
+      <li>[Fix] Bug where comments and code were on the same line during border XML writing (causing invalid XML nodes)</li>
+      <li>[Fix] fillId offset issue (Excel reserves the first two fills, user fills start from index 2)</li>
+      <li>[Optimize] All test files converted to UTF-8 BOM format for PureBasic compatibility</li>
+      <li>[New] Complete test suite (StyleStepTest, FullStyleTest, etc.)</li>
+    </ul>
+
+    <h3>v2.3 (2026-04-20)</h3>
+    <ul>
+      <li>[Refactor] Project renamed to PbXls (formerly PureXL)</li>
+      <li>[Fix] Fixed UTF-8 encoding buffer overflow causing FreeMemory crash</li>
+      <li>[Fix] Fixed string type cell data not being written to XML</li>
+      <li>[Fix] Fixed Map access syntax error (correct PureBasic Map access method)</li>
+      <li>[Fix] Fixed List parameter declaration syntax</li>
+      <li>[New] Added complete test code (10 test items)</li>
+      <li>[New] Added detailed code comments</li>
+      <li>[New] Generated HTML help documentation</li>
+      <li>[New] Added README.md documentation</li>
+    </ul>
+
+    <h3>v2.2 (2026-04-14)</h3>
+    <ul>
+      <li>[Optimize] Optimized XML generation performance, reduced memory usage</li>
+      <li>[Optimize] Optimized shared strings table construction algorithm, improved large data processing speed</li>
+      <li>[Fix] Fixed prefix error when setting XML node attributes</li>
+      <li>[Fix] Fixed workbook relationship file (workbook.xml.rels) generation logic</li>
+      <li>[New] Added inline string (inlineStr) support for cells</li>
+    </ul>
+
+    <h3>v2.1 (2026-04-04)</h3>
+    <ul>
+      <li>[New] Cell style module (fonts, fills, borders, alignments, number formats)</li>
+      <li>[New] Font style settings (font name, size, color, bold, italic, underline)</li>
+      <li>[New] Fill style settings (pattern fill, foreground color, background color)</li>
+      <li>[New] Border style settings (top, bottom, left, right border styles and colors)</li>
+      <li>[New] Alignment style settings (horizontal alignment, vertical alignment, text wrapping)</li>
+      <li>[New] Number format settings (built-in number formats, custom number formats)</li>
+      <li>[New] Style table XML generation (styles.xml)</li>
+    </ul>
+
+    <h3>v2.0 (2026-03-25)</h3>
+    <ul>
+      <li>[New] Formula cell support (SetCellFormula function)</li>
+      <li>[New] Boolean cell support (true/false)</li>
+      <li>[New] Date-time cell support</li>
+      <li>[New] Error cell support</li>
+      <li>[New] Cell data type auto-inference</li>
+      <li>[New] Cell type enumeration definitions</li>
+      <li>[Optimize] Refactored data structure design, using global Map/List instead of nested structures</li>
+      <li>[Fix] Fixed formula cell XML writing logic</li>
+    </ul>
+
+    <h3>v1.9 (2026-03-15)</h3>
+    <ul>
+      <li>[New] Workbook metadata support (core.xml, app.xml)</li>
+      <li>[New] Content type file generation ([Content_Types].xml)</li>
+      <li>[New] Root relationship file generation (_rels/.rels)</li>
+      <li>[New] Workbook relationship file generation (xl/_rels/workbook.xml.rels)</li>
+      <li>[New] Document property settings (creator, title, description, modification time, etc.)</li>
+      <li>[Optimize] Improved Office Open XML standard compatibility</li>
+    </ul>
+
+    <h3>v1.8 (2026-03-05)</h3>
+    <ul>
+      <li>[New] Multiple worksheet support (AddWorksheet function)</li>
+      <li>[New] Worksheet deletion (DeleteWorksheet function)</li>
+      <li>[New] Get worksheet by index (GetSheetByIndex function)</li>
+      <li>[New] Get worksheet count (GetSheetCount function)</li>
+      <li>[New] Get worksheet name (GetSheetTitle function)</li>
+      <li>[New] Worksheet relationship management</li>
+      <li>[Optimize] Worksheet ID management system</li>
+    </ul>
+
+    <h3>v1.7 (2026-02-23)</h3>
+    <ul>
+      <li>[New] Worksheet XML generator (worksheet.xml)</li>
+      <li>[New] Workbook XML generator (workbook.xml)</li>
+      <li>[New] Shared strings table XML generator (sharedStrings.xml)</li>
+      <li>[New] XML helper functions (node creation, attribute setting, text setting, etc.)</li>
+      <li>[New] XML save to string function</li>
+      <li>[New] XML namespace constant definitions</li>
+      <li>[Optimize] Modularized XML generation code</li>
+    </ul>
+
+    <h3>v1.6 (2026-02-13)</h3>
+    <ul>
+      <li>[New] Shared strings table support (Shared Strings Table)</li>
+      <li>[New] String deduplication optimization to reduce file size</li>
+      <li>[New] String index mapping function</li>
+      <li>[New] Shared string count statistics</li>
+      <li>[Optimize] String storage method, using global List instead of structure members</li>
+    </ul>
+
+    <h3>v1.5 (2026-02-03)</h3>
+    <ul>
+      <li>[New] Merge cells feature (MergeCells function)</li>
+      <li>[New] Unmerge cells feature (UnmergeCells function)</li>
+      <li>[New] Merged cells XML node generation (mergeCells)</li>
+      <li>[New] Merged cell range parsing</li>
+      <li>[Optimize] Worksheet data structure to support merged cell storage</li>
+    </ul>
+
+    <h3>v1.4 (2026-01-24)</h3>
+    <ul>
+      <li>[New] Set column width feature (SetColumnWidth function)</li>
+      <li>[New] Set row height feature (SetRowHeight function)</li>
+      <li>[New] Column width XML node generation (cols/col)</li>
+      <li>[New] Row height XML attribute generation (row ht attribute)</li>
+      <li>[New] Row/column dimension data storage (global Map)</li>
+    </ul>
+
+    <h3>v1.3 (2026-01-14)</h3>
+    <ul>
+      <li>[New] Numeric cell support</li>
+      <li>[New] Auto-detection of numbers (integers, floating-point)</li>
+      <li>[New] Cell data type enumeration (string, numeric, etc.)</li>
+      <li>[New] Numeric cell XML writing logic (v node)</li>
+      <li>[Optimize] Cell value storage method</li>
+    </ul>
+
+    <h3>v1.2 (2026-01-04)</h3>
+    <ul>
+      <li>[New] Batch append row data feature (AppendRow function)</li>
+      <li>[New] Worksheet current row tracking</li>
+      <li>[New] Worksheet max row/column auto-update</li>
+      <li>[New] Cell data batch writing optimization</li>
+      <li>[Optimize] Cell access performance using Map for fast lookup</li>
+    </ul>
+
+    <h3>v1.1 (2025-12-25)</h3>
+    <ul>
+      <li>[New] Cell write feature (SetCell function)</li>
+      <li>[New] String type cell support</li>
+      <li>[New] Cell data structure definition</li>
+      <li>[New] Worksheet data structure definition</li>
+      <li>[New] XML special character escaping (EscapeXML function)</li>
+      <li>[New] Column number and letter conversion (GetColumnLetter, ColumnIndexFromString)</li>
+    </ul>
+
+    <h3>v1.0 (2025-12-15)</h3>
+    <ul>
+      <li>[New] Initial project creation, based on openpyxl</li>
+      <li>[New] Workbook creation feature (CreateWorkbook function)</li>
+      <li>[New] Default worksheet auto-creation</li>
+      <li>[New] Excel specification constant definitions (max rows/columns, etc.)</li>
+      <li>[New] File path constant definitions</li>
+      <li>[New] MIME type constant definitions</li>
+      <li>[New] XML namespace constant definitions</li>
+      <li>[New] Built-in number format constant definitions</li>
+      <li>[New] Cell type enumeration definitions</li>
+      <li>[New] Worksheet state enumeration definitions</li>
+      <li>[New] ZIP packaging support (UseZipPacker, CreatePack, etc.)</li>
+      <li>[New] Initialization and cleanup functions (Init, Free)</li>
+    </ul>
+  </div>
+
+  <div class="section" id="donate">
+    <h2>Donate</h2>
+    <p>If PbXls is helpful to you, donations are welcome to support the continued development and maintenance of this project. Thank you for your generosity!</p>
+    <ul>
+      <li><strong>PayPal</strong>: <a href="https://www.paypal.me/lcodecn" target="_blank">https://www.paypal.me/lcodecn</a></li>
+      <li><strong>WeChat</strong>: #Pay:lcodecn(Business_lcodecn)/openlib/003</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    <p>PbXls Library v2.6 | Author: lcode.cn | License: Apache 2.0</p>
+  </div>
+
+</div>
+
+</body>
+</html>

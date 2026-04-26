@@ -1,4 +1,4 @@
-﻿; PbXls 保存诊断测试
+﻿﻿; PbXls 保存诊断测试
 XIncludeFile "..\PbXls.pb"
 
 Debug "=== PbXls 保存诊断 ==="
